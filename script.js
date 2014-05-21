@@ -361,7 +361,10 @@ model.servers.forEach(function (server) {
   util.reparseSVG($('#servers'));
   model.servers.forEach(function(server) {
     $('#server-' + server.id + ' a', svg)
-      .click(function() { serverModal(server); });
+      .click(function() {
+        serverModal(server);
+        return false;
+      });
   });
 });
 
@@ -453,7 +456,10 @@ var renderMessages = function() {
   util.reparseSVG(messagesGroup);
   model.messages.forEach(function(message, i) {
     $('a#message-' + i, svg)
-      .click(function() { messageModal(message); });
+      .click(function() {
+        messageModal(message);
+        return false;
+      });
   });
 };
 
