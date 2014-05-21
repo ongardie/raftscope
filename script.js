@@ -6,6 +6,7 @@ var RPC_LATENCY = 10000;
 var ELECTION_TIMEOUT = 100000;
 var ARC_WIDTH = 5;
 var rules = {};
+var pause = false;
 
 var util = {};
 
@@ -443,8 +444,9 @@ var renderMessages = function() {
   util.reparseSVG();
 };
 
-//setTimeout(function() {
 setInterval(function() {
+  if (pause)
+    return;
   model.time += 100;
   model.servers.forEach(function(server) {
     rules.startNewElection(model, server);
@@ -477,6 +479,12 @@ setInterval(function() {
   renderMessages();
   renderLogs();
 }, 10);
+
+$(window).keyup(function(e) {
+  if (e.keyCode == 32) { // space
+    pause = !pause;
+  }
+});
 
 model.servers[0].log.append({term: 1, value: 'hello'});
 model.servers[0].log.append({term: 1, value: 'world'});
