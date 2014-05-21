@@ -137,6 +137,7 @@ rules.becomeLeader = function(model, server) {
     server.state = 'leader';
     server.nextIndex = util.makeMap(server.peers, server.log.len() + 1);
     server.rpcDue    = util.makeMap(server.peers, model.time);
+    server.electionAlarm = Infinity;
   }
 };
 
@@ -367,7 +368,6 @@ var arcSpec = function(spec, fraction) {
   return s.join(' ');
 };
 
-
 renderServers = function() {
   model.servers.forEach(function(server) {
     var serverNode = $('#server-' + server.id, svg);
@@ -375,8 +375,8 @@ renderServers = function() {
       .attr('class', server.state);
     $('path', serverNode)
       .attr('d', arcSpec(serverSpec(server.id),
-              (server.electionAlarm - model.time) /
-              (ELECTION_TIMEOUT * 2)));
+              Math.min(1, (server.electionAlarm - model.time) /
+                          (ELECTION_TIMEOUT * 2))));
   });
 };
 
