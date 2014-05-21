@@ -5,7 +5,6 @@ var RPC_TIMEOUT = 50000;
 var RPC_LATENCY = 10000;
 var ELECTION_TIMEOUT = 100000;
 var ARC_WIDTH = 5;
-var renderMessages;
 var rules = {};
 
 var util = {};
@@ -323,6 +322,10 @@ var ring = svg.append(
     .attr('id', 'ring')
     .attr(ringSpec));
 
+svg.append(
+  $('<text id="clock">Clock: <tspan id="time"></tspan>s</text>')
+    .attr({x: 10, y: 30}));
+
 model.servers.forEach(function (server) {
   var s = serverSpec(server.id);
   svg.append(
@@ -370,7 +373,11 @@ var arcSpec = function(spec, fraction) {
   return s.join(' ');
 };
 
-renderServers = function() {
+var renderClock = function() {
+  $('#clock #time', svg).text((model.time / 1e6).toFixed(3));
+};
+
+var renderServers = function() {
   model.servers.forEach(function(server) {
     var serverNode = $('#server-' + server.id, svg);
     $('circle', serverNode)
@@ -383,7 +390,7 @@ renderServers = function() {
   });
 };
 
-renderMessages = function() {
+var renderMessages = function() {
   $('.message', svg).remove();
   model.messages.forEach(function(message) {
     var s = messageSpec(message.from, message.to,
@@ -397,6 +404,7 @@ renderMessages = function() {
   util.reparseSVG();
 };
 
+//setTimeout(function() {
 setInterval(function() {
   model.time += 100;
   model.servers.forEach(function(server) {
@@ -425,7 +433,7 @@ setInterval(function() {
     });
   });
 
-
+  renderClock();
   renderServers();
   renderMessages();
 }, 10);
