@@ -389,12 +389,10 @@ renderMessages = function() {
     var s = messageSpec(message.from, message.to,
                         (model.time - message.sendTime) /
                         (message.recvTime - message.sendTime));
-    if (message.recvTime >= model.time) {
-      svg.append(
-        $('<circle />')
-          .addClass('message')
-          .attr(s));
-    }
+    svg.append(
+      $('<circle />')
+        .attr('class', 'message ' + message.direction)
+        .attr(s));
   });
   util.reparseSVG();
 };

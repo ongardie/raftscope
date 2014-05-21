@@ -27,3 +27,13 @@ svg .server text {
   alignment-baseline: central;
   text-align: center';
 }
+
+svg .message.request {
+  fill: blue;
+  stroke: blue;
+}
+
+svg .message.reply {
+  fill: none;
+  stroke: blue;
+}
