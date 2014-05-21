@@ -61,3 +61,7 @@ svg .entry text {
   text-align: center';
 }
 
+svg .nextIndex {
+  fill: green;
+  fill-opacity: .5;
+}

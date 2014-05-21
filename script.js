@@ -7,6 +7,7 @@ var ELECTION_TIMEOUT = 100000;
 var ARC_WIDTH = 5;
 var rules = {};
 var pause = false;
+var getLeader;
 
 var util = {};
 
@@ -267,8 +268,9 @@ var handleAppendEntriesReply = function(model, server, reply) {
     stepDown(model, server, reply.term);
   if (server.state == 'leader' &&
       server.term == reply.term) {
-    if (reply.successs) {
-      server.matchIndex[reply.from] = reply.matchIndex;
+    if (reply.success) {
+      server.matchIndex[reply.from] = Math.max(server.matchIndex[reply.from],
+                                               reply.matchIndex);
     } else {
       server.nextIndex[reply.from] = Math.max(1, server.nextIndex[reply.from] - 1);
     }
@@ -426,6 +428,7 @@ var renderLogs = function() {
       .attr('id', 'logs')
       .attr(logsSpec));
   var height = logsSpec.height / NUM_SERVERS;
+  var leader = getLeader();
   model.servers.forEach(function(server) {
     var logSpec = {
       x: logsSpec.x + logsSpec.width * .05,
@@ -446,13 +449,21 @@ var renderLogs = function() {
           height: logSpec.height,
         }, entry, index <= server.commitIndex));
     });
-    /*
-    logsGroup.append(
-      $('<circle />')
-        .attr({cx: logSpec.x + server.commitIndex * 25,
-               cy: logSpec.y + logSpec.height,
-               r: 3}));
-    */
+    if (leader != null && leader != server) {
+      logsGroup.append(
+        $('<circle />')
+          .attr({cx: logSpec.x + leader.matchIndex[server.id] * 25,
+                 cy: logSpec.y + logSpec.height,
+                 r: 3}));
+      logsGroup.append($('<rect />')
+        .attr('class', 'nextIndex')
+        .attr({
+          x: logSpec.x + (leader.nextIndex[server.id] - 1) * 25,
+          y: logSpec.y,
+          width: 25,
+          height: logSpec.height,
+        }));
+    }
   });
   util.reparseSVG(logsGroup);
 };
@@ -608,6 +619,19 @@ $(window).keyup(function(e) {
 $('#modal-details').on('show.bs.modal', function(e) {
   pause = true;
 });
+
+getLeader = function() {
+  var leader = null;
+  var term = 0;
+  model.servers.forEach(function(server) {
+    if (server.state == 'leader' &&
+        server.term > term) {
+        leader = server;
+        term = server.term;
+    }
+  });
+  return leader;
+};
 
 model.servers[0].log.append({term: 1, value: 'hello'});
 model.servers[0].log.append({term: 1, value: 'world'});
