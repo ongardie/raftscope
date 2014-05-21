@@ -4,6 +4,7 @@ var NUM_SERVERS = 5;
 var RPC_TIMEOUT = 50000;
 var RPC_LATENCY = 10000;
 var ELECTION_TIMEOUT = 100000;
+var ARC_WIDTH = 5;
 var renderMessages;
 var rules = {};
 
@@ -324,10 +325,13 @@ var ring = svg.append(
 model.servers.forEach(function (server) {
   var s = serverSpec(server.id);
   svg.append(
-    $('<circle />')
-      .addClass('server')
+    $('<g></g>')
       .attr('id', 'server-' + server.id)
-      .attr(s));
+      .attr('class', 'server')
+      .append($('<circle />')
+                 .attr(s))
+      .append($('<path />')
+                 .attr('style', 'stroke-width: ' + ARC_WIDTH)));
 });
 
 util.reparseSVG = function() {
@@ -350,10 +354,29 @@ var messageSpec = function(from, to, frac) {
   };
 };
 
+var arcSpec = function(spec, fraction) {
+  var comma = ',';
+  var radius = spec.r + ARC_WIDTH/2;
+  var end = util.circleCoord(fraction, spec.cx, spec.cy, radius);
+  s = ['M', spec.cx, comma, spec.cy - radius];
+  if (fraction > .5) {
+    s.push('A', radius, comma, radius, '0 0,1', spec.cx, spec.cy + radius);
+    s.push('M', spec.cx, comma, spec.cy + radius);
+  }
+  s.push('A', radius, comma, radius, '0 0,1', end.x, end.y);
+  return s.join(' ');
+};
+
+
 renderServers = function() {
   model.servers.forEach(function(server) {
-    $('#server-' + server.id, svg)
+    var serverNode = $('#server-' + server.id, svg);
+    $('circle', serverNode)
       .attr('class', server.state);
+    $('path', serverNode)
+      .attr('d', arcSpec(serverSpec(server.id),
+              (server.electionAlarm - model.time) /
+              (ELECTION_TIMEOUT * 2)));
   });
 };
 
@@ -400,6 +423,7 @@ setInterval(function() {
       }
     });
   });
+
 
   renderServers();
   renderMessages();

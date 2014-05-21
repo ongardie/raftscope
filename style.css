@@ -16,3 +16,8 @@ svg .candidate {
 svg .leader {
   fill: green;
 }
+
+svg .server path {
+  fill: none;
+  stroke: black;
+}
