@@ -302,7 +302,7 @@ var handleMessage = function(model, server, message) {
 svg = $('svg');
 
 var ringSpec = {
-  cx: 300,
+  cx: 200,
   cy: 200,
   r: 150,
 };
