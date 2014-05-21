@@ -47,7 +47,8 @@ var makeLog = function() {
       entries.push(entry);
     },
     truncatePast: function(index) {
-      entries = entries.slice(0, index);
+      while (entries.length > index)
+        entries.pop();
     },
   };
 };
@@ -143,13 +144,11 @@ rules.becomeLeader = function(model, server) {
 
 rules.sendAppendEntries = function(model, server, peer) {
   if (server.state == 'leader' &&
-      (server.nextIndex[peer] < server.log.len() ||
+      (server.nextIndex[peer] <= server.log.len() ||
        server.rpcDue[peer] < model.time)) {
-    server.rpcDue[peer] = model.time + ELECTION_TIMEOUT / 2;
     var lastIndex = server.nextIndex[peer];
     if (lastIndex > server.log.len())
       lastIndex -= 1;
-    server.nextIndex[peer] = lastIndex + 1;
     sendRequest(model, {
       from: server.id,
       to: peer,
@@ -159,6 +158,8 @@ rules.sendAppendEntries = function(model, server, peer) {
       prevTerm: server.log.term(server.nextIndex[peer] - 1),
       entries: server.log.slice(server.nextIndex[peer], lastIndex + 1),
       commitIndex: Math.min(server.commitIndex, lastIndex)});
+    server.rpcDue[peer] = model.time + ELECTION_TIMEOUT / 2;
+    server.nextIndex[peer] = lastIndex + 1;
   }
 };
 
@@ -268,7 +269,6 @@ var handleAppendEntriesReply = function(model, server, reply) {
       server.term == reply.term) {
     if (reply.successs) {
       server.matchIndex[reply.from] = reply.matchIndex;
-      server.nextIndex[reply.from] += 1;
     } else {
       server.nextIndex[reply.from] = Math.max(1, server.nextIndex[reply.from] - 1);
     }
@@ -406,11 +406,12 @@ var renderServers = function() {
   });
 };
 
-var renderEntry = function(spec, entry) {
+var renderEntry = function(spec, entry, committed) {
   return $('<g></g>')
     .attr('class', 'entry')
     .append($('<rect />')
-      .attr(spec))
+      .attr(spec)
+      .attr('stroke-dasharray', committed ? '1 0' : '5 5'))
     .append($('<text />')
       .attr({x: spec.x + spec.width / 2,
              y: spec.y + spec.height / 2})
@@ -437,18 +438,21 @@ var renderLogs = function() {
         .attr(logSpec)
         .attr('class', 'log'));
     server.log.entries.forEach(function(entry, i) {
+      var index = i + 1;
         logsGroup.append(renderEntry({
           x: logSpec.x + i * 25,
           y: logSpec.y,
           width: 25,
           height: logSpec.height,
-        }, entry));
+        }, entry, index <= server.commitIndex));
     });
+    /*
     logsGroup.append(
       $('<circle />')
         .attr({cx: logSpec.x + server.commitIndex * 25,
                cy: logSpec.y + logSpec.height,
                r: 3}));
+    */
   });
   util.reparseSVG(logsGroup);
 };
@@ -540,9 +544,12 @@ var messageModal = function(message) {
     }
   } else if (message.type == 'AppendEntries') {
     if (message.direction == 'request') {
+      var entries = '[' + message.entries.map(function(e) {
+            return e.term;
+      }).join(' ') + ']';
       fields.append(li('prevIndex', message.prevIndex));
       fields.append(li('prevTerm', message.prevTerm));
-      fields.append(li('entries', message.entries));
+      fields.append(li('entries', entries));
       fields.append(li('commitIndex', message.commitIndex));
     } else {
       fields.append(li('success', message.success));
@@ -604,5 +611,6 @@ $('#modal-details').on('show.bs.modal', function(e) {
 
 model.servers[0].log.append({term: 1, value: 'hello'});
 model.servers[0].log.append({term: 1, value: 'world'});
+model.servers[0].electionAlarm = 10;
 
 });
