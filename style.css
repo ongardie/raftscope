@@ -1,0 +1,18 @@
+svg #ring {
+  opacity: 0.2;
+}
+
+svg .server {
+}
+
+svg .follower {
+  fill: red;
+}
+
+svg .candidate {
+  fill: yellow;
+}
+
+svg .leader {
+  fill: green;
+}
