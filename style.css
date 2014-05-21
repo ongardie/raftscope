@@ -41,3 +41,8 @@ svg .message.reply {
   fill: none;
   stroke: blue;
 }
+
+svg .log {
+  fill: none;
+  stroke: black;
+}

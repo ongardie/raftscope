@@ -148,7 +148,7 @@ rules.sendAppendEntries = function(model, server, peer) {
     var lastIndex = server.nextIndex[peer];
     if (lastIndex > server.log.len())
       lastIndex -= 1;
-    server.nextIndex[peer] = lastIndex;
+    server.nextIndex[peer] = lastIndex + 1;
     sendRequest(model, {
       from: server.id,
       to: peer,
@@ -403,6 +403,32 @@ var renderServers = function() {
   });
 };
 
+var renderLogs = function() {
+  $('.log', svg).remove();
+  var height = logsSpec.height / NUM_SERVERS;
+  model.servers.forEach(function(server) {
+    var logSpec = {
+      x: logsSpec.x + logsSpec.width * .1,
+      y: logsSpec.y + height * server.id - 3*height/4,
+      width: logsSpec.width * .8,
+      height: height/2,
+    };
+    svg.append(
+      $('<rect />')
+        .attr(logSpec)
+        .attr('class', 'log'));
+    svg.append(
+      $('<text />')
+        .attr({x: logSpec.x, y: logSpec.y + height/4})
+        .attr('style', 'alignment-baseline: central')
+        .attr('class', 'log')
+        .text(server.log.entries.map(function(e,i) {
+          return e.term + ' ' + e.value;
+        })));
+  });
+  util.reparseSVG();
+};
+
 var renderMessages = function() {
   $('.message', svg).remove();
   model.messages.forEach(function(message) {
@@ -449,6 +475,10 @@ setInterval(function() {
   renderClock();
   renderServers();
   renderMessages();
+  renderLogs();
 }, 10);
+
+model.servers[0].log.append({term: 1, value: 'hello'});
+model.servers[0].log.append({term: 1, value: 'world'});
 
 });
