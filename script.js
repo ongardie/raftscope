@@ -575,6 +575,11 @@ $(window).keyup(function(e) {
   }
 });
 
+
+$('#modal-details').on('show.bs.modal', function(e) {
+  pause = true;
+});
+
 model.servers[0].log.append({term: 1, value: 'hello'});
 model.servers[0].log.append({term: 1, value: 'world'});
 
