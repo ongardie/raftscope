@@ -222,7 +222,7 @@ var handleRequestVoteRequest = function(model, server, request) {
 
 var handleRequestVoteReply = function(model, server, reply) {
   if (server.term < reply.term)
-    stepDown(reply.term);
+    stepDown(model, server, reply.term);
   if (server.state == 'candidate' &&
       server.term == reply.term) {
     server.rpcDue[reply.from] = Infinity;
@@ -263,7 +263,7 @@ var handleAppendEntriesRequest = function(model, server, request) {
 
 var handleAppendEntriesReply = function(model, server, reply) {
   if (server.term < reply.term)
-    stepDown(reply.term);
+    stepDown(model, server, reply.term);
   if (server.state == 'leader' &&
       server.term == reply.term) {
     if (reply.successs) {
@@ -330,14 +330,7 @@ util.reparseSVG = function(node) {
   node.html(node.html()); // reparse as SVG after adding nodes
 };
 
-var ring = $('#ring', svg)
-            .attr(ringSpec);
-
-var logs = $('#logsGroup').append(
-  $('<rect />')
-    .attr('id', 'logs')
-    .attr(logsSpec));
-util.reparseSVG(logs);
+$('#ring', svg).attr(ringSpec);
 
 svg.append(
   $('<text id="clock">Clock: <tspan id="time"></tspan>s</text>')
@@ -413,30 +406,51 @@ var renderServers = function() {
   });
 };
 
+var renderEntry = function(spec, entry) {
+  return $('<g></g>')
+    .attr('class', 'entry')
+    .append($('<rect />')
+      .attr(spec))
+    .append($('<text />')
+      .attr({x: spec.x + spec.width / 2,
+             y: spec.y + spec.height / 2})
+      .text(entry.term));
+};
+
 var renderLogs = function() {
-  $('.log', svg).remove();
+  var logsGroup = $('#logsGroup', svg);
+  logsGroup.empty();
+  logsGroup.append(
+    $('<rect />')
+      .attr('id', 'logs')
+      .attr(logsSpec));
   var height = logsSpec.height / NUM_SERVERS;
   model.servers.forEach(function(server) {
     var logSpec = {
-      x: logsSpec.x + logsSpec.width * .1,
-      y: logsSpec.y + height * server.id - 3*height/4,
-      width: logsSpec.width * .8,
-      height: height/2,
+      x: logsSpec.x + logsSpec.width * .05,
+      y: logsSpec.y + height * server.id - 5*height/6,
+      width: logsSpec.width * .9,
+      height: 2*height/3,
     };
-    svg.append(
+    logsGroup.append(
       $('<rect />')
         .attr(logSpec)
         .attr('class', 'log'));
-    svg.append(
-      $('<text />')
-        .attr({x: logSpec.x, y: logSpec.y + height/4})
-        .attr('style', 'alignment-baseline: central')
-        .attr('class', 'log')
-        .text(server.log.entries.map(function(e,i) {
-          return e.term + ' ' + e.value;
-        })));
+    server.log.entries.forEach(function(entry, i) {
+        logsGroup.append(renderEntry({
+          x: logSpec.x + i * 25,
+          y: logSpec.y,
+          width: 25,
+          height: logSpec.height,
+        }, entry));
+    });
+    logsGroup.append(
+      $('<circle />')
+        .attr({cx: logSpec.x + server.commitIndex * 25,
+               cy: logSpec.y + logSpec.height,
+               r: 3}));
   });
-  util.reparseSVG($('#logsGroup'));
+  util.reparseSVG(logsGroup);
 };
 
 var renderMessages = function() {

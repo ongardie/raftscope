@@ -46,5 +46,17 @@ svg .message.reply {
 
 svg .log {
   fill: none;
+  stroke: gray;
+}
+
+svg .entry rect {
+  fill: none;
   stroke: black;
 }
+
+svg .entry text {
+  text-anchor: middle;
+  alignment-baseline: central;
+  text-align: center';
+}
+
