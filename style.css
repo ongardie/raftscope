@@ -2,6 +2,10 @@ svg #ring {
   opacity: 0.2;
 }
 
+svg #logs {
+  opacity: 0.2;
+}
+
 svg .server {
 }
 

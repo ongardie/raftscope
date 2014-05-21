@@ -307,6 +307,14 @@ var ringSpec = {
   r: 150,
 };
 
+var logsSpec = {
+  x: 400,
+  y: 50,
+  width: 250,
+  height: 300,
+};
+
+
 var serverSpec = function(id) {
   var coord = util.circleCoord((id - 1) / NUM_SERVERS,
                                ringSpec.cx, ringSpec.cy, ringSpec.r);
@@ -321,6 +329,11 @@ var ring = svg.append(
   $('<circle />')
     .attr('id', 'ring')
     .attr(ringSpec));
+
+var logs = svg.append(
+  $('<rect />')
+    .attr('id', 'logs')
+    .attr(logsSpec));
 
 svg.append(
   $('<text id="clock">Clock: <tspan id="time"></tspan>s</text>')
@@ -437,7 +450,5 @@ setInterval(function() {
   renderServers();
   renderMessages();
 }, 10);
-
-
 
 });
