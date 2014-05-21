@@ -21,3 +21,9 @@ svg .server path {
   fill: none;
   stroke: black;
 }
+
+svg .server text {
+  text-anchor: middle;
+  alignment-baseline: central;
+  text-align: center';
+}

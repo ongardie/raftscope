@@ -332,7 +332,9 @@ model.servers.forEach(function (server) {
       .append($('<circle />')
                  .attr(s))
       .append($('<path />')
-                 .attr('style', 'stroke-width: ' + ARC_WIDTH)));
+                 .attr('style', 'stroke-width: ' + ARC_WIDTH))
+      .append($('<text />')
+                 .attr({x: s.cx, y: s.cy})));
 });
 
 util.reparseSVG = function() {
@@ -377,6 +379,7 @@ renderServers = function() {
       .attr('d', arcSpec(serverSpec(server.id),
               Math.min(1, (server.electionAlarm - model.time) /
                           (ELECTION_TIMEOUT * 2))));
+    $('text', serverNode).text(server.term);
   });
 };
 
