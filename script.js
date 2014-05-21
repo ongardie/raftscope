@@ -346,12 +346,14 @@ model.servers.forEach(function (server) {
     $('<g></g>')
       .attr('id', 'server-' + server.id)
       .attr('class', 'server')
-      .append($('<circle />')
-                 .attr(s))
-      .append($('<path />')
-                 .attr('style', 'stroke-width: ' + ARC_WIDTH))
-      .append($('<text />')
-                 .attr({x: s.cx, y: s.cy})));
+      .append($('<a xlink:href="#"></a>')
+        .append($('<circle />')
+                   .attr(s))
+        .append($('<path />')
+                   .attr('style', 'stroke-width: ' + ARC_WIDTH))
+        .append($('<text />')
+                   .attr({x: s.cx, y: s.cy}))
+        ));
 });
 
 util.reparseSVG = function() {
@@ -444,6 +446,41 @@ var renderMessages = function() {
   util.reparseSVG();
 };
 
+var serverModal = function(server) {
+  var m = $('#modal-details');
+  $('.modal-title', m).text('Server ' + server.id);
+  var li = function(label, value) {
+    return '<dt>' + label + '</dt><dd>' + value + '</dd>';
+  };
+  var peerTable = $('<table></table>')
+    .addClass('table')
+    .append($('<tr></tr>')
+      .append('<th>peer</th>')
+      .append('<th>nextIndex</th>')
+      .append('<th>matchIndex</th>')
+      .append('<th>voteGranted</th>')
+      .append('<th>rpcDue</th>'));
+  server.peers.forEach(function(peer) {
+    peerTable.append($('<tr></tr>')
+      .append('<td>S' + peer + '</td>')
+      .append('<td>' + server.nextIndex[peer] + '</td>')
+      .append('<td>' + server.matchIndex[peer] + '</td>')
+      .append('<td>' + server.voteGranted[peer] + '</td>')
+      .append('<td>' + server.rpcDue[peer] + '</td>'));
+  });
+  $('.modal-body', m)
+    .empty()
+    .append($('<dl class="dl-horizontal"></dl>')
+      .append(li('state', server.state))
+      .append(li('currentTerm', server.term))
+      .append(li('votedFor', server.votedFor))
+      .append(li('commitIndex', server.commitIndex))
+      .append($('<dt>peers</dt>'))
+      .append($('<dd></dd>').append(peerTable))
+    );
+  m.modal();
+};
+
 setInterval(function() {
   if (pause)
     return;
@@ -478,7 +515,12 @@ setInterval(function() {
   renderServers();
   renderMessages();
   renderLogs();
+  model.servers.forEach(function(server) {
+    $('#server-' + server.id + ' a', svg)
+      .click(function() { serverModal(server); });
+  });
 }, 10);
+
 
 $(window).keyup(function(e) {
   if (e.keyCode == 32) { // space
