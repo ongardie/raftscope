@@ -38,7 +38,9 @@ svg .message.request {
 }
 
 svg .message.reply {
-  fill: none;
+  /* fill with no opacity so it's clickable */
+  fill: blue;
+  fill-opacity: 0;
   stroke: blue;
 }
 

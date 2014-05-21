@@ -326,23 +326,27 @@ var serverSpec = function(id) {
   };
 };
 
-var ring = svg.append(
-  $('<circle />')
-    .attr('id', 'ring')
-    .attr(ringSpec));
+util.reparseSVG = function(node) {
+  node.html(node.html()); // reparse as SVG after adding nodes
+};
 
-var logs = svg.append(
+var ring = $('#ring', svg)
+            .attr(ringSpec);
+
+var logs = $('#logsGroup').append(
   $('<rect />')
     .attr('id', 'logs')
     .attr(logsSpec));
+util.reparseSVG(logs);
 
 svg.append(
   $('<text id="clock">Clock: <tspan id="time"></tspan>s</text>')
     .attr({x: 10, y: 30}));
+util.reparseSVG(svg);
 
 model.servers.forEach(function (server) {
   var s = serverSpec(server.id);
-  svg.append(
+  $('#servers', svg).append(
     $('<g></g>')
       .attr('id', 'server-' + server.id)
       .attr('class', 'server')
@@ -354,12 +358,12 @@ model.servers.forEach(function (server) {
         .append($('<text />')
                    .attr({x: s.cx, y: s.cy}))
         ));
+  util.reparseSVG($('#servers'));
+  model.servers.forEach(function(server) {
+    $('#server-' + server.id + ' a', svg)
+      .click(function() { serverModal(server); });
+  });
 });
-
-util.reparseSVG = function() {
-  svg.html(svg.html()); // reparse as SVG after adding nodes
-};
-util.reparseSVG();
 
 var messageSpec = function(from, to, frac) {
   var fromSpec = serverSpec(from);
@@ -429,21 +433,28 @@ var renderLogs = function() {
           return e.term + ' ' + e.value;
         })));
   });
-  util.reparseSVG();
+  util.reparseSVG($('#logsGroup'));
 };
 
 var renderMessages = function() {
-  $('.message', svg).remove();
-  model.messages.forEach(function(message) {
+  var messagesGroup = $('#messages', svg);
+  messagesGroup.empty();
+  model.messages.forEach(function(message, i) {
     var s = messageSpec(message.from, message.to,
                         (model.time - message.sendTime) /
                         (message.recvTime - message.sendTime));
-    svg.append(
-      $('<circle />')
-        .attr('class', 'message ' + message.direction)
-        .attr(s));
+    messagesGroup.append(
+      $('<a xlink:href="#"></a>')
+        .attr('id', 'message-' + i)
+        .append($('<circle />')
+          .attr('class', 'message ' + message.direction)
+          .attr(s)));
   });
-  util.reparseSVG();
+  util.reparseSVG(messagesGroup);
+  model.messages.forEach(function(message, i) {
+    $('a#message-' + i, svg)
+      .click(function() { messageModal(message); });
+  });
 };
 
 var serverModal = function(server) {
@@ -481,6 +492,41 @@ var serverModal = function(server) {
   m.modal();
 };
 
+var messageModal = function(message) {
+  var m = $('#modal-details');
+  $('.modal-title', m).text(message.type + ' ' + message.direction);
+  var li = function(label, value) {
+    return '<dt>' + label + '</dt><dd>' + value + '</dd>';
+  };
+  var fields = $('<dl class="dl-horizontal"></dl>')
+      .append(li('from', 'S' + message.from))
+      .append(li('to', 'S' + message.to))
+      .append(li('sent', message.sendTime))
+      .append(li('term', message.term));
+  if (message.type == 'RequestVote') {
+    if (message.direction == 'request') {
+      fields.append(li('lastLogIndex', message.lastLogIndex));
+      fields.append(li('lastLogTerm', message.lastLogTerm));
+    } else {
+      fields.append(li('granted', message.granted));
+    }
+  } else if (message.type == 'AppendEntries') {
+    if (message.direction == 'request') {
+      fields.append(li('prevIndex', message.prevIndex));
+      fields.append(li('prevTerm', message.prevTerm));
+      fields.append(li('entries', message.entries));
+      fields.append(li('commitIndex', message.commitIndex));
+    } else {
+      fields.append(li('success', message.success));
+      fields.append(li('matchIndex', message.matchIndex));
+    }
+  }
+  $('.modal-body', m)
+    .empty()
+    .append(fields);
+  m.modal();
+};
+
 setInterval(function() {
   if (pause)
     return;
@@ -515,12 +561,7 @@ setInterval(function() {
   renderServers();
   renderMessages();
   renderLogs();
-  model.servers.forEach(function(server) {
-    $('#server-' + server.id + ' a', svg)
-      .click(function() { serverModal(server); });
-  });
 }, 10);
-
 
 $(window).keyup(function(e) {
   if (e.keyCode == 32) { // space
