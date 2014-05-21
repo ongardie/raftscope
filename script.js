@@ -463,6 +463,13 @@ var renderMessages = function() {
   });
 };
 
+var relTime = function(time, now) {
+  if (time == Infinity)
+    return 'infinity';
+  var sign = time > now ? '+' : '';
+  return sign + ((time - now) / 1e3).toFixed(3) + 'ms';
+}
+
 var serverModal = function(server) {
   var m = $('#modal-details');
   $('.modal-title', m).text('Server ' + server.id);
@@ -483,7 +490,7 @@ var serverModal = function(server) {
       .append('<td>' + server.nextIndex[peer] + '</td>')
       .append('<td>' + server.matchIndex[peer] + '</td>')
       .append('<td>' + server.voteGranted[peer] + '</td>')
-      .append('<td>' + server.rpcDue[peer] + '</td>'));
+      .append('<td>' + relTime(server.rpcDue[peer], model.time) + '</td>'));
   });
   $('.modal-body', m)
     .empty()
@@ -507,7 +514,8 @@ var messageModal = function(message) {
   var fields = $('<dl class="dl-horizontal"></dl>')
       .append(li('from', 'S' + message.from))
       .append(li('to', 'S' + message.to))
-      .append(li('sent', message.sendTime))
+      .append(li('sent', relTime(message.sendTime, model.time)))
+      .append(li('deliver', relTime(message.recvTime, model.time)))
       .append(li('term', message.term));
   if (message.type == 'RequestVote') {
     if (message.direction == 'request') {
