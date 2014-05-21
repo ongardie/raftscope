@@ -183,7 +183,7 @@ var stepDown = function(model, server, term) {
 
 var sendMessage = function(model, message) {
   message.sendTime = model.time;
-  message.recvTime = model.time + RPC_LATENCY;
+  message.recvTime = model.time + (1 + (.5 * (Math.random() - .5))) * RPC_LATENCY;
   model.messages.push(message);
 };
 
