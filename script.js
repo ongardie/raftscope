@@ -294,14 +294,14 @@ serverModal = function(server) {
     return '<dt>' + label + '</dt><dd>' + value + '</dd>';
   };
   let peerTable = $('<table></table>')
-    .addClass('table')
+    .addClass('table table-condensed')
     .append($('<tr></tr>')
       .append('<th>peer</th>')
-      .append('<th>nextIndex</th>')
-      .append('<th>matchIndex</th>')
-      .append('<th>voteGranted</th>')
-      .append('<th>rpcDue</th>')
-      .append('<th>heartbeatDue</th>')
+      .append('<th>next index</th>')
+      .append('<th>match index</th>')
+      .append('<th>vote granted</th>')
+      .append('<th>RPC due</th>')
+      .append('<th>heartbeat due</th>')
     );
   server.peers.forEach(function(peer) {
     peerTable.append($('<tr></tr>')
@@ -320,6 +320,7 @@ serverModal = function(server) {
       .append(li('currentTerm', server.term))
       .append(li('votedFor', server.votedFor))
       .append(li('commitIndex', server.commitIndex))
+      .append(li('electionAlarm', relTime(server.electionAlarm, model.time)))
       .append($('<dt>peers</dt>'))
       .append($('<dd></dd>').append(peerTable))
     );

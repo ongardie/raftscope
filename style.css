@@ -69,3 +69,12 @@ svg .nextIndex {
   fill: green;
   fill-opacity: .5;
 }
+
+@media (min-width: 768px) {
+  #modal-details .modal-body .dl-horizontal dt {
+    width: 100px;
+  }
+  .dl-horizontal dd {
+    margin-left: 120px;
+  }
+}
