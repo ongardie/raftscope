@@ -11,6 +11,7 @@ var playback;
 var getLeader;
 var history;
 var update;
+var render = {};
 
 var util = {};
 
@@ -440,14 +441,14 @@ var arcSpec = function(spec, fraction) {
   return s.join(' ');
 };
 
-var renderClock = function() {
+render.clock = function() {
   if (playback.isTimeTraveling())
     return;
   timeSlider.slider('setAttribute', 'max', model.time);
   timeSlider.slider('setValue', model.time, false);
 };
 
-var renderServers = function() {
+render.servers = function() {
   model.servers.forEach(function(server) {
     var serverNode = $('#server-' + server.id, svg);
     $('circle', serverNode)
@@ -460,7 +461,7 @@ var renderServers = function() {
   });
 };
 
-var renderEntry = function(spec, entry, committed) {
+render.entry = function(spec, entry, committed) {
   return $('<g></g>')
     .attr('class', 'entry')
     .append($('<rect />')
@@ -472,7 +473,7 @@ var renderEntry = function(spec, entry, committed) {
       .text(entry.term));
 };
 
-var renderLogs = function() {
+render.logs = function() {
   var logsGroup = $('#logsGroup', svg);
   logsGroup.empty();
   logsGroup.append(
@@ -494,7 +495,7 @@ var renderLogs = function() {
         .attr('class', 'log'));
     server.log.entries.forEach(function(entry, i) {
       var index = i + 1;
-        logsGroup.append(renderEntry({
+        logsGroup.append(render.entry({
           x: logSpec.x + i * 25,
           y: logSpec.y,
           width: 25,
@@ -520,7 +521,7 @@ var renderLogs = function() {
   util.reparseSVG(logsGroup);
 };
 
-var renderMessages = function(messagesSame) {
+render.messages = function(messagesSame) {
   var messagesGroup = $('#messages', svg);
   if (messagesSame) {
     model.messages.forEach(function(message, i) {
@@ -709,13 +710,18 @@ var update = function() {
   var last = history[history.length - 1];
   var serversSame = util.equals(last.servers, model.servers);
   var messagesSame = util.equals(last.messages, model.messages);
-  if (!serversSame || !messagesSame)
-    history.push(util.clone(model));
-  renderClock();
-  renderServers();
-  renderMessages(messagesSame);
+  if (playback.isTimeTraveling()) {
+    serversSame = false;
+    messageSame = false;
+  } else {
+    if (!serversSame || !messagesSame)
+      history.push(util.clone(model));
+  }
+  render.clock();
+  render.servers();
+  render.messages(messagesSame);
   if (!serversSame)
-    renderLogs();
+    render.logs();
 };
 
 setInterval(function() {
