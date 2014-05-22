@@ -7,7 +7,7 @@ var ELECTION_TIMEOUT = 100000;
 var ARC_WIDTH = 5;
 var BATCH_SIZE = 2;
 var rules = {};
-var pause = false;
+var playback;
 var getLeader;
 var history;
 var update;
@@ -19,6 +19,48 @@ $(function() {
 var makeElectionAlarm = function(model) {
   return model.time + (Math.random() + 1) * ELECTION_TIMEOUT;
 };
+
+playback = function() {
+  var timeTravel = false;
+  var paused = false;
+  var resume = function() {
+    if (paused) {
+      paused = false;
+      var i = util.greatestLower(history, function(m) { return m.time > model.time; });
+      while (history.length - 1 > i)
+        history.pop();
+      timeTravel = false;
+    }
+  };
+  return {
+    pause: function() {
+      paused = true;
+    },
+    resume: resume,
+    toggle: function() {
+      if (paused)
+        resume();
+      else
+        paused = true;
+    },
+    isPaused: function() {
+      return paused;
+    },
+    startTimeTravel: function() {
+      paused = true;
+      timeTravel = true;
+    },
+    endTimeTravel: function() {
+      if (timeTravel) {
+        resume();
+        paused = true;
+      }
+    },
+    isTimeTraveling: function() {
+      return timeTravel;
+    },
+  };
+}();
 
 model = {
   servers: [],
@@ -346,11 +388,6 @@ util.reparseSVG = function(node) {
 
 $('#ring', svg).attr(ringSpec);
 
-svg.append(
-  $('<text id="clock">Clock: <tspan id="time"></tspan>s</text>')
-    .attr({x: 10, y: 30}));
-util.reparseSVG(svg);
-
 model.servers.forEach(function (server) {
   var s = serverSpec(server.id);
   $('#servers', svg).append(
@@ -404,7 +441,10 @@ var arcSpec = function(spec, fraction) {
 };
 
 var renderClock = function() {
-  $('#clock #time', svg).text((model.time / 1e6).toFixed(3));
+  if (playback.isTimeTraveling())
+    return;
+  timeSlider.slider('setAttribute', 'max', model.time);
+  timeSlider.slider('setValue', model.time, false);
 };
 
 var renderServers = function() {
@@ -679,7 +719,7 @@ var update = function() {
 };
 
 setInterval(function() {
-  if (pause)
+  if (playback.isPaused())
     return;
   model.time += 10 * 1000 / sliderTransform($('#speed').slider('getValue'));
   update();
@@ -687,10 +727,11 @@ setInterval(function() {
 
 $(window).keyup(function(e) {
   if (e.keyCode == ' '.charCodeAt(0)) {
-    pause = !pause;
+    playback.toggle();
   } else if (e.keyCode == 'C'.charCodeAt(0)) {
     var leader = getLeader();
     if (leader != null) {
+      playback.endTimeTravel();
       leader.log.append({term: leader.term,
                          value: 'keypress'});
       update();
@@ -698,6 +739,7 @@ $(window).keyup(function(e) {
   } else if (e.keyCode == 'R'.charCodeAt(0)) {
     var leader = getLeader();
     if (leader != null) {
+      playback.endTimeTravel();
       stepDown(model, leader, leader.term);
       update();
     }
@@ -705,7 +747,7 @@ $(window).keyup(function(e) {
 });
 
 $('#modal-details').on('show.bs.modal', function(e) {
-  pause = true;
+  playback.pause();
 });
 
 getLeader = function() {
@@ -734,8 +776,40 @@ var sliderTransform = function(v) {
 $("#speed").slider({
   tooltip: 'always',
   formater: function(value) {
-    return sliderTransform(value).toFixed(1) + ':1';
+    return sliderTransform(value).toFixed(0) + 'x';
   },
+  reversed: true,
+});
+
+util.greatestLower = function(a, gt) {
+  var bs = function(low, high) {
+    if (high < low)
+      return low - 1;
+    var mid = Math.floor((low + high) / 2);
+    if (gt(a[mid]))
+      return bs(low, mid - 1);
+    else
+      return bs(mid + 1, high);
+  };
+  return bs(0, a.length - 1);
+}
+
+var timeSlider = $('#time');
+timeSlider.slider({
+  tooltip: 'always',
+  formater: function(value) {
+    return (value / 1e6).toFixed(3) + 's';
+  },
+});
+timeSlider.on('slideStart', function() {
+  playback.startTimeTravel();
+});
+timeSlider.on('slide', function() {
+  var t = timeSlider.slider('getValue');
+  var i = util.greatestLower(history, function(m) { return m.time > t; });
+  model = util.clone(history[i]);
+  model.time = t;
+  update();
 });
 
 history = [util.clone(model)];
