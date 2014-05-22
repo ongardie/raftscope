@@ -66,7 +66,7 @@ raft.server = function(id, peers) {
   };
 };
 
-raft.stepDown = function(model, server, term) {
+let stepDown = function(model, server, term) {
   server.term = term;
   server.state = 'follower';
   server.votedFor = null;
@@ -152,7 +152,7 @@ rules.advanceCommitIndex = function(model, server) {
 
 let handleRequestVoteRequest = function(model, server, request) {
   if (server.term < request.term)
-    raft.stepDown(model, server, request.term);
+    stepDown(model, server, request.term);
   let granted = false;
   if (server.term == request.term &&
       (server.votedFor === null ||
@@ -172,7 +172,7 @@ let handleRequestVoteRequest = function(model, server, request) {
 
 let handleRequestVoteReply = function(model, server, reply) {
   if (server.term < reply.term)
-    raft.stepDown(model, server, reply.term);
+    stepDown(model, server, reply.term);
   if (server.state == 'candidate' &&
       server.term == reply.term) {
     server.rpcDue[reply.from] = Infinity;
@@ -184,7 +184,7 @@ let handleAppendEntriesRequest = function(model, server, request) {
   let success = false;
   let matchIndex = 0;
   if (server.term < request.term)
-    raft.stepDown(model, server, request.term);
+    stepDown(model, server, request.term);
   if (server.term == request.term) {
     server.state = 'follower';
     server.electionAlarm = makeElectionAlarm(model.time);
@@ -215,7 +215,7 @@ let handleAppendEntriesRequest = function(model, server, request) {
 
 let handleAppendEntriesReply = function(model, server, reply) {
   if (server.term < reply.term)
-    raft.stepDown(model, server, reply.term);
+    stepDown(model, server, reply.term);
   if (server.state == 'leader' &&
       server.term == reply.term) {
     if (reply.success) {
@@ -230,6 +230,8 @@ let handleAppendEntriesReply = function(model, server, reply) {
 };
 
 let handleMessage = function(model, server, message) {
+  if (server.state == 'stopped')
+    return;
   if (message.type == 'RequestVote') {
     if (message.direction == 'request')
       handleRequestVoteRequest(model, server, message);
@@ -270,6 +272,16 @@ raft.update = function(model) {
       }
     });
   });
+};
+
+raft.stop = function(model, server) {
+  server.state = 'stopped';
+  server.electionAlarm = 0;
+};
+
+raft.resume = function(model, server) {
+  server.state = 'follower';
+  server.electionAlarm = makeElectionAlarm(model.time);
 };
 
 })();

@@ -97,3 +97,10 @@ util.greatestLower = function(a, gt) {
   return bs(0, a.length - 1);
 };
 
+util.clamp = function(value, low, high) {
+  if (value < low)
+    return low;
+  if (value > high)
+    return high;
+  return value;
+};

@@ -21,6 +21,10 @@ svg .leader {
   fill: green;
 }
 
+svg .stopped {
+  fill: gray;
+}
+
 svg .server path {
   fill: none;
   stroke: black;

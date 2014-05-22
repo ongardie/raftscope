@@ -180,8 +180,9 @@ render.servers = function() {
       .attr('class', server.state);
     $('path', serverNode)
       .attr('d', arcSpec(serverSpec(server.id),
-              Math.min(1, (server.electionAlarm - model.time) /
-                          (ELECTION_TIMEOUT * 2))));
+         util.clamp((server.electionAlarm - model.time) /
+                    (ELECTION_TIMEOUT * 2),
+                    0, 1)));
     $('text', serverNode).text(server.term);
   });
 };
@@ -419,7 +420,8 @@ $(window).keyup(function(e) {
     let leader = getLeader();
     if (leader !== null) {
       playback.endTimeTravel();
-      raft.stepDown(model, leader, leader.term);
+      raft.stop(model, leader);
+      raft.resume(model, leader);
       update();
     }
   }
