@@ -1,35 +1,35 @@
 'use strict';
 
-var svg;
-var model;
-var NUM_SERVERS = 5;
-var RPC_TIMEOUT = 50000;
-var RPC_LATENCY = 10000;
-var ELECTION_TIMEOUT = 100000;
-var ARC_WIDTH = 5;
-var BATCH_SIZE = 1;
-var rules = {};
-var playback;
-var getLeader;
-var history;
-var update;
-var render = {};
+let svg;
+let model;
+let NUM_SERVERS = 5;
+let RPC_TIMEOUT = 50000;
+let RPC_LATENCY = 10000;
+let ELECTION_TIMEOUT = 100000;
+let ARC_WIDTH = 5;
+let BATCH_SIZE = 1;
+let rules = {};
+let playback;
+let getLeader;
+let history;
+let update;
+let render = {};
 
-var util = {};
+let util = {};
 
 $(function() {
 
-var makeElectionAlarm = function(model) {
+let makeElectionAlarm = function(model) {
   return model.time + (Math.random() + 1) * ELECTION_TIMEOUT;
 };
 
 playback = function() {
-  var timeTravel = false;
-  var paused = false;
-  var resume = function() {
+  let timeTravel = false;
+  let paused = false;
+  let resume = function() {
     if (paused) {
       paused = false;
-      var i = util.greatestLower(history, function(m) { return m.time > model.time; });
+      let i = util.greatestLower(history, function(m) { return m.time > model.time; });
       while (history.length - 1 > i)
         history.pop();
       timeTravel = false;
@@ -72,8 +72,8 @@ model = {
   seed: 0,
 };
 
-var makeLog = function() {
-  var entries = [];
+let makeLog = function() {
+  let entries = [];
   return {
     entries: entries,
     at: function(index) {
@@ -107,7 +107,7 @@ util.value = function(v) {
 };
 
 util.circleCoord = function(frac, cx, cy, r) {
-  var radians = 2 * Math.PI * (.75 + frac);
+  let radians = 2 * Math.PI * (.75 + frac);
   return {
     x: cx + r * Math.cos(radians),
     y: cy + r * Math.sin(radians),
@@ -115,7 +115,7 @@ util.circleCoord = function(frac, cx, cy, r) {
 };
 
 util.countTrue = function(bools) {
-  var count = 0;
+  let count = 0;
   bools.forEach(function(b) {
     if (b)
       count += 1;
@@ -124,7 +124,7 @@ util.countTrue = function(bools) {
 };
 
 util.makeMap = function(keys, value) {
-  var m = {};
+  let m = {};
   keys.forEach(function(key) {
     m[key] = value;
   });
@@ -135,7 +135,7 @@ util.mapValues = function(m) {
   return $.map(m, function(v) { return v; });
 };
 
-var Server = function(id, peers) {
+let Server = function(id, peers) {
   return {
     id: id,
     peers: peers,
@@ -199,8 +199,8 @@ rules.sendAppendEntries = function(model, server, peer) {
       (server.heartbeatDue[peer] < model.time ||
        (server.nextIndex[peer] <= server.log.len() &&
         server.rpcDue[peer] < model.time))) {
-    var prevIndex = server.nextIndex[peer] - 1;
-    var lastIndex = Math.min(prevIndex + BATCH_SIZE,
+    let prevIndex = server.nextIndex[peer] - 1;
+    let lastIndex = Math.min(prevIndex + BATCH_SIZE,
                              server.log.len());
     if (server.matchIndex[peer] + 1 < server.nextIndex[peer])
       lastIndex = prevIndex;
@@ -219,16 +219,16 @@ rules.sendAppendEntries = function(model, server, peer) {
 };
 
 rules.advanceCommitIndex = function(model, server) {
-  var matchIndexes = util.mapValues(server.matchIndex).concat(server.log.len());
+  let matchIndexes = util.mapValues(server.matchIndex).concat(server.log.len());
   matchIndexes.sort();
-  var n = matchIndexes[Math.floor(NUM_SERVERS / 2)];
+  let n = matchIndexes[Math.floor(NUM_SERVERS / 2)];
   if (server.state == 'leader' &&
       server.log.term(n) == server.term) {
     server.commitIndex = Math.max(server.commitIndex, n);
   }
 }
 
-var stepDown = function(model, server, term) {
+let stepDown = function(model, server, term) {
   server.term = term;
   server.state = 'follower';
   server.votedFor = null;
@@ -237,18 +237,18 @@ var stepDown = function(model, server, term) {
   }
 };
 
-var sendMessage = function(model, message) {
+let sendMessage = function(model, message) {
   message.sendTime = model.time;
   message.recvTime = model.time + (1 + (.5 * (Math.random() - .5))) * RPC_LATENCY;
   model.messages.push(message);
 };
 
-var sendRequest = function(model, request) {
+let sendRequest = function(model, request) {
   request.direction = 'request';
   sendMessage(model, request);
 };
 
-var sendReply = function(model, request, reply) {
+let sendReply = function(model, request, reply) {
   reply.from = request.to;
   reply.to = request.from;
   reply.type = request.type;
@@ -256,10 +256,10 @@ var sendReply = function(model, request, reply) {
   sendMessage(model, reply);
 };
 
-var handleRequestVoteRequest = function(model, server, request) {
+let handleRequestVoteRequest = function(model, server, request) {
   if (server.term < request.term)
     stepDown(model, server, request.term);
-  var granted = false;
+  let granted = false;
   if (server.term == request.term &&
       (server.votedFor == null ||
        server.votedFor == request.from) &&
@@ -276,7 +276,7 @@ var handleRequestVoteRequest = function(model, server, request) {
   });
 };
 
-var handleRequestVoteReply = function(model, server, reply) {
+let handleRequestVoteReply = function(model, server, reply) {
   if (server.term < reply.term)
     stepDown(model, server, reply.term);
   if (server.state == 'candidate' &&
@@ -286,9 +286,9 @@ var handleRequestVoteReply = function(model, server, reply) {
   }
 }
 
-var handleAppendEntriesRequest = function(model, server, request) {
-  var success = false;
-  var matchIndex = 0;
+let handleAppendEntriesRequest = function(model, server, request) {
+  let success = false;
+  let matchIndex = 0;
   if (server.term < request.term)
     stepDown(model, server, request.term);
   if (server.term == request.term) {
@@ -298,8 +298,8 @@ var handleAppendEntriesRequest = function(model, server, request) {
         (request.prevIndex <= server.log.len() &&
          server.log.term(request.prevIndex) == request.prevTerm)) {
       success = true;
-      var index = request.prevIndex;
-      for (var i = 0; i < request.entries.length; i += 1) {
+      let index = request.prevIndex;
+      for (let i = 0; i < request.entries.length; i += 1) {
         index += 1;
         if (server.log.term(index) != request.entries[i].term) {
           server.log.truncatePast(index - 1);
@@ -318,7 +318,7 @@ var handleAppendEntriesRequest = function(model, server, request) {
   });
 };
 
-var handleAppendEntriesReply = function(model, server, reply) {
+let handleAppendEntriesReply = function(model, server, reply) {
   if (server.term < reply.term)
     stepDown(model, server, reply.term);
   if (server.state == 'leader' &&
@@ -334,7 +334,7 @@ var handleAppendEntriesReply = function(model, server, reply) {
   }
 }
 
-var handleMessage = function(model, server, message) {
+let handleMessage = function(model, server, message) {
   if (message.type == 'RequestVote') {
     if (message.direction == 'request')
       handleRequestVoteRequest(model, server, message);
@@ -349,9 +349,9 @@ var handleMessage = function(model, server, message) {
 };
 
 (function() {
-  for (var i = 1; i <= NUM_SERVERS; i += 1) {
-      var peers = [];
-      for (var j = 1; j <= NUM_SERVERS; j += 1) {
+  for (let i = 1; i <= NUM_SERVERS; i += 1) {
+      let peers = [];
+      for (let j = 1; j <= NUM_SERVERS; j += 1) {
         if (i != j)
           peers.push(j);
       }
@@ -361,13 +361,13 @@ var handleMessage = function(model, server, message) {
 
 svg = $('svg');
 
-var ringSpec = {
+let ringSpec = {
   cx: 200,
   cy: 200,
   r: 150,
 };
 
-var logsSpec = {
+let logsSpec = {
   x: 400,
   y: 50,
   width: 250,
@@ -375,8 +375,8 @@ var logsSpec = {
 };
 
 
-var serverSpec = function(id) {
-  var coord = util.circleCoord((id - 1) / NUM_SERVERS,
+let serverSpec = function(id) {
+  let coord = util.circleCoord((id - 1) / NUM_SERVERS,
                                ringSpec.cx, ringSpec.cy, ringSpec.r);
   return {
     cx: coord.x,
@@ -392,7 +392,7 @@ util.reparseSVG = function(node) {
 $('#ring', svg).attr(ringSpec);
 
 model.servers.forEach(function (server) {
-  var s = serverSpec(server.id);
+  let s = serverSpec(server.id);
   $('#servers', svg).append(
     $('<g></g>')
       .attr('id', 'server-' + server.id)
@@ -415,13 +415,13 @@ model.servers.forEach(function (server) {
   });
 });
 
-var messageSpec = function(from, to, frac) {
-  var fromSpec = serverSpec(from);
-  var toSpec = serverSpec(to);
+let messageSpec = function(from, to, frac) {
+  let fromSpec = serverSpec(from);
+  let toSpec = serverSpec(to);
   // adjust frac so you start and end at the edge of servers
-  var totalDist  = Math.sqrt(Math.pow(toSpec.cx - fromSpec.cx, 2) +
+  let totalDist  = Math.sqrt(Math.pow(toSpec.cx - fromSpec.cx, 2) +
                              Math.pow(toSpec.cy - fromSpec.cy, 2));
-  var travel = totalDist - fromSpec.r - toSpec.r;
+  let travel = totalDist - fromSpec.r - toSpec.r;
   frac = (fromSpec.r / totalDist) + frac * (travel / totalDist);
   return {
     cx: fromSpec.cx + (toSpec.cx - fromSpec.cx) * frac,
@@ -430,11 +430,11 @@ var messageSpec = function(from, to, frac) {
   };
 };
 
-var arcSpec = function(spec, fraction) {
-  var comma = ',';
-  var radius = spec.r + ARC_WIDTH/2;
-  var end = util.circleCoord(fraction, spec.cx, spec.cy, radius);
-  var s = ['M', spec.cx, comma, spec.cy - radius];
+let arcSpec = function(spec, fraction) {
+  let comma = ',';
+  let radius = spec.r + ARC_WIDTH/2;
+  let end = util.circleCoord(fraction, spec.cx, spec.cy, radius);
+  let s = ['M', spec.cx, comma, spec.cy - radius];
   if (fraction > .5) {
     s.push('A', radius, comma, radius, '0 0,1', spec.cx, spec.cy + radius);
     s.push('M', spec.cx, comma, spec.cy + radius);
@@ -452,7 +452,7 @@ render.clock = function() {
 
 render.servers = function() {
   model.servers.forEach(function(server) {
-    var serverNode = $('#server-' + server.id, svg);
+    let serverNode = $('#server-' + server.id, svg);
     $('circle', serverNode)
       .attr('class', server.state);
     $('path', serverNode)
@@ -476,16 +476,16 @@ render.entry = function(spec, entry, committed) {
 };
 
 render.logs = function() {
-  var logsGroup = $('#logsGroup', svg);
+  let logsGroup = $('#logsGroup', svg);
   logsGroup.empty();
   logsGroup.append(
     $('<rect />')
       .attr('id', 'logs')
       .attr(logsSpec));
-  var height = logsSpec.height / NUM_SERVERS;
-  var leader = getLeader();
+  let height = logsSpec.height / NUM_SERVERS;
+  let leader = getLeader();
   model.servers.forEach(function(server) {
-    var logSpec = {
+    let logSpec = {
       x: logsSpec.x + logsSpec.width * .05,
       y: logsSpec.y + height * server.id - 5*height/6,
       width: logsSpec.width * .9,
@@ -496,7 +496,7 @@ render.logs = function() {
         .attr(logSpec)
         .attr('class', 'log'));
     server.log.entries.forEach(function(entry, i) {
-      var index = i + 1;
+      let index = i + 1;
         logsGroup.append(render.entry({
           x: logSpec.x + i * 25,
           y: logSpec.y,
@@ -524,10 +524,10 @@ render.logs = function() {
 };
 
 render.messages = function(messagesSame) {
-  var messagesGroup = $('#messages', svg);
+  let messagesGroup = $('#messages', svg);
   if (messagesSame) {
     model.messages.forEach(function(message, i) {
-      var s = messageSpec(message.from, message.to,
+      let s = messageSpec(message.from, message.to,
                           (model.time - message.sendTime) /
                           (message.recvTime - message.sendTime));
       $('#message-' + i + ' circle', messagesGroup)
@@ -536,7 +536,7 @@ render.messages = function(messagesSame) {
   } else {
     messagesGroup.empty();
     model.messages.forEach(function(message, i) {
-      var s = messageSpec(message.from, message.to,
+      let s = messageSpec(message.from, message.to,
                           (model.time - message.sendTime) /
                           (message.recvTime - message.sendTime));
       messagesGroup.append(
@@ -557,20 +557,20 @@ render.messages = function(messagesSame) {
   }
 };
 
-var relTime = function(time, now) {
+let relTime = function(time, now) {
   if (time == Infinity)
     return 'infinity';
-  var sign = time > now ? '+' : '';
+  let sign = time > now ? '+' : '';
   return sign + ((time - now) / 1e3).toFixed(3) + 'ms';
 }
 
-var serverModal = function(server) {
-  var m = $('#modal-details');
+let serverModal = function(server) {
+  let m = $('#modal-details');
   $('.modal-title', m).text('Server ' + server.id);
-  var li = function(label, value) {
+  let li = function(label, value) {
     return '<dt>' + label + '</dt><dd>' + value + '</dd>';
   };
-  var peerTable = $('<table></table>')
+  let peerTable = $('<table></table>')
     .addClass('table')
     .append($('<tr></tr>')
       .append('<th>peer</th>')
@@ -603,13 +603,13 @@ var serverModal = function(server) {
   m.modal();
 };
 
-var messageModal = function(message) {
-  var m = $('#modal-details');
+let messageModal = function(message) {
+  let m = $('#modal-details');
   $('.modal-title', m).text(message.type + ' ' + message.direction);
-  var li = function(label, value) {
+  let li = function(label, value) {
     return '<dt>' + label + '</dt><dd>' + value + '</dd>';
   };
-  var fields = $('<dl class="dl-horizontal"></dl>')
+  let fields = $('<dl class="dl-horizontal"></dl>')
       .append(li('from', 'S' + message.from))
       .append(li('to', 'S' + message.to))
       .append(li('sent', relTime(message.sendTime, model.time)))
@@ -624,7 +624,7 @@ var messageModal = function(message) {
     }
   } else if (message.type == 'AppendEntries') {
     if (message.direction == 'request') {
-      var entries = '[' + message.entries.map(function(e) {
+      let entries = '[' + message.entries.map(function(e) {
             return e.term;
       }).join(' ') + ']';
       fields.append(li('prevIndex', message.prevIndex));
@@ -658,7 +658,7 @@ util.equals = function(x, y) {
     // they must have the exact same prototype chain, the closest we can do is
     // test there constructor.
 
-  for ( var p in x ) {
+  for ( let p in x ) {
     if ( ! x.hasOwnProperty( p ) ) continue;
       // other properties were tested using x.constructor === y.constructor
 
@@ -675,14 +675,14 @@ util.equals = function(x, y) {
       // Objects and Arrays must be tested recursively
   }
 
-  for ( p in y ) {
+  for ( let p in y ) {
     if ( y.hasOwnProperty( p ) && ! x.hasOwnProperty( p ) ) return false;
       // allows x[ p ] to be set to undefined
   }
   return true;
 };
 
-var update = function() {
+let update = function() {
   model.servers.forEach(function(server) {
     rules.startNewElection(model, server);
     rules.becomeLeader(model, server);
@@ -692,8 +692,8 @@ var update = function() {
       rules.sendAppendEntries(model, server, peer);
     });
   });
-  var deliver = [];
-  var keep = [];
+  let deliver = [];
+  let keep = [];
   model.messages.forEach(function(message) {
     if (message.recvTime <= model.time)
       deliver.push(message);
@@ -709,9 +709,9 @@ var update = function() {
     });
   });
 
-  var last = history[history.length - 1];
-  var serversSame = util.equals(last.servers, model.servers);
-  var messagesSame = util.equals(last.messages, model.messages);
+  let last = history[history.length - 1];
+  let serversSame = util.equals(last.servers, model.servers);
+  let messagesSame = util.equals(last.messages, model.messages);
   if (playback.isTimeTraveling()) {
     serversSame = false;
     messagesSame = false;
@@ -737,7 +737,7 @@ $(window).keyup(function(e) {
   if (e.keyCode == ' '.charCodeAt(0)) {
     playback.toggle();
   } else if (e.keyCode == 'C'.charCodeAt(0)) {
-    var leader = getLeader();
+    let leader = getLeader();
     if (leader != null) {
       playback.endTimeTravel();
       leader.log.append({term: leader.term,
@@ -745,7 +745,7 @@ $(window).keyup(function(e) {
       update();
     }
   } else if (e.keyCode == 'R'.charCodeAt(0)) {
-    var leader = getLeader();
+    let leader = getLeader();
     if (leader != null) {
       playback.endTimeTravel();
       stepDown(model, leader, leader.term);
@@ -759,8 +759,8 @@ $('#modal-details').on('show.bs.modal', function(e) {
 });
 
 getLeader = function() {
-  var leader = null;
-  var term = 0;
+  let leader = null;
+  let term = 0;
   model.servers.forEach(function(server) {
     if (server.state == 'leader' &&
         server.term > term) {
@@ -771,7 +771,7 @@ getLeader = function() {
   return leader;
 };
 
-var sliderTransform = function(v) {
+let sliderTransform = function(v) {
   v = Math.pow(v, 3) + 100;
   if (v < 1)
     return 1;
@@ -790,10 +790,10 @@ $("#speed").slider({
 });
 
 util.greatestLower = function(a, gt) {
-  var bs = function(low, high) {
+  let bs = function(low, high) {
     if (high < low)
       return low - 1;
-    var mid = Math.floor((low + high) / 2);
+    let mid = Math.floor((low + high) / 2);
     if (gt(a[mid]))
       return bs(low, mid - 1);
     else
@@ -802,7 +802,7 @@ util.greatestLower = function(a, gt) {
   return bs(0, a.length - 1);
 }
 
-var timeSlider = $('#time');
+let timeSlider = $('#time');
 timeSlider.slider({
   tooltip: 'always',
   formater: function(value) {
@@ -813,8 +813,8 @@ timeSlider.on('slideStart', function() {
   playback.startTimeTravel();
 });
 timeSlider.on('slide', function() {
-  var t = timeSlider.slider('getValue');
-  var i = util.greatestLower(history, function(m) { return m.time > t; });
+  let t = timeSlider.slider('getValue');
+  let i = util.greatestLower(history, function(m) { return m.time > t; });
   model = util.clone(history[i]);
   model.time = t;
   update();
