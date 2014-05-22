@@ -29,7 +29,11 @@ svg .server path {
 svg .server text {
   text-anchor: middle;
   alignment-baseline: central;
-  text-align: center';
+  text-align: center;
+}
+
+svg .server a:hover {
+  text-decoration: none;
 }
 
 svg .message.request {
