@@ -10,6 +10,7 @@ var rules = {};
 var pause = false;
 var getLeader;
 var history;
+var update;
 
 var util = {};
 
@@ -533,14 +534,18 @@ var serverModal = function(server) {
       .append('<th>nextIndex</th>')
       .append('<th>matchIndex</th>')
       .append('<th>voteGranted</th>')
-      .append('<th>rpcDue</th>'));
+      .append('<th>rpcDue</th>')
+      .append('<th>heartbeatDue</th>')
+    );
   server.peers.forEach(function(peer) {
     peerTable.append($('<tr></tr>')
       .append('<td>S' + peer + '</td>')
       .append('<td>' + server.nextIndex[peer] + '</td>')
       .append('<td>' + server.matchIndex[peer] + '</td>')
       .append('<td>' + server.voteGranted[peer] + '</td>')
-      .append('<td>' + relTime(server.rpcDue[peer], model.time) + '</td>'));
+      .append('<td>' + relTime(server.rpcDue[peer], model.time) + '</td>')
+      .append('<td>' + relTime(server.heartbeatDue[peer], model.time) + '</td>')
+    );
   });
   $('.modal-body', m)
     .empty()
@@ -634,10 +639,7 @@ util.equals = function(x, y) {
   return true;
 };
 
-setInterval(function() {
-  if (pause)
-    return;
-  model.time += 100;
+var update = function() {
   model.servers.forEach(function(server) {
     rules.startNewElection(model, server);
     rules.becomeLeader(model, server);
@@ -674,6 +676,13 @@ setInterval(function() {
   renderMessages(messagesSame);
   if (!serversSame)
     renderLogs();
+};
+
+setInterval(function() {
+  if (pause)
+    return;
+  model.time += 100;
+  update();
 }, 10);
 
 $(window).keyup(function(e) {
@@ -684,15 +693,16 @@ $(window).keyup(function(e) {
     if (leader != null) {
       leader.log.append({term: leader.term,
                          value: 'keypress'});
+      update();
     }
   } else if (e.keyCode == 'R'.charCodeAt(0)) {
     var leader = getLeader();
     if (leader != null) {
       stepDown(model, leader, leader.term);
+      update();
     }
   }
 });
-
 
 $('#modal-details').on('show.bs.modal', function(e) {
   pause = true;
