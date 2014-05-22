@@ -156,6 +156,8 @@ rules.sendAppendEntries = function(model, server, peer) {
     var prevIndex = server.nextIndex[peer] - 1;
     var lastIndex = Math.min(prevIndex + BATCH_SIZE,
                              server.log.len());
+    if (server.matchIndex[peer] + 1 < server.nextIndex[peer])
+      lastIndex = prevIndex;
     sendRequest(model, {
       from: server.id,
       to: peer,
