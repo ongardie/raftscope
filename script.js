@@ -712,8 +712,6 @@ getLeader = function() {
 };
 
 history = [util.clone(model)];
-model.servers[0].log.append({term: 1, value: 'hello'});
-model.servers[0].log.append({term: 1, value: 'world'});
 model.servers[0].electionAlarm = 10;
 history.push(util.clone(model));
 });
