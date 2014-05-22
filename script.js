@@ -97,10 +97,11 @@ var Server = function(id, peers) {
     log: makeLog(),
     commitIndex: 0,
     electionAlarm: makeElectionAlarm(model),
-    rpcDue:      util.makeMap(peers, 0),
-    voteGranted: util.makeMap(peers, false),
-    matchIndex:  util.makeMap(peers, 0),
-    nextIndex:   util.makeMap(peers, 1),
+    voteGranted:  util.makeMap(peers, false),
+    matchIndex:   util.makeMap(peers, 0),
+    nextIndex:    util.makeMap(peers, 1),
+    rpcDue:       util.makeMap(peers, 0),
+    heartbeatDue: util.makeMap(peers, 0),
   };
 };
 
@@ -111,10 +112,11 @@ rules.startNewElection = function(model, server) {
     server.term += 1;
     server.votedFor = server.id;
     server.state = 'candidate';
-    server.rpcDue      = util.makeMap(server.peers, 0);
-    server.voteGranted = util.makeMap(server.peers, false);
-    server.matchIndex  = util.makeMap(server.peers, 0);
-    server.nextIndex   = util.makeMap(server.peers, 1);
+    server.voteGranted  = util.makeMap(server.peers, false);
+    server.matchIndex   = util.makeMap(server.peers, 0);
+    server.nextIndex    = util.makeMap(server.peers, 1);
+    server.rpcDue       = util.makeMap(server.peers, 0);
+    server.heartbeatDue = util.makeMap(server.peers, 0);
   }
 };
 
@@ -137,16 +139,18 @@ rules.becomeLeader = function(model, server) {
       util.countTrue(util.mapValues(server.voteGranted)) + 1 > Math.floor(NUM_SERVERS / 2)) {
     console.log('server ' + server.id + ' is leader in term ' + server.term);
     server.state = 'leader';
-    server.nextIndex = util.makeMap(server.peers, server.log.len() + 1);
-    server.rpcDue    = util.makeMap(server.peers, model.time);
+    server.nextIndex    = util.makeMap(server.peers, server.log.len() + 1);
+    server.rpcDue       = util.makeMap(server.peers, Infinity);
+    server.heartbeatDue = util.makeMap(server.peers, 0);
     server.electionAlarm = Infinity;
   }
 };
 
 rules.sendAppendEntries = function(model, server, peer) {
   if (server.state == 'leader' &&
-      (server.nextIndex[peer] <= server.log.len() ||
-       server.rpcDue[peer] < model.time)) {
+      (server.heartbeatDue[peer] < model.time ||
+       (server.nextIndex[peer] <= server.log.len() &&
+        server.rpcDue[peer] < model.time))) {
     var lastIndex = server.nextIndex[peer];
     if (lastIndex > server.log.len())
       lastIndex -= 1;
@@ -159,8 +163,8 @@ rules.sendAppendEntries = function(model, server, peer) {
       prevTerm: server.log.term(server.nextIndex[peer] - 1),
       entries: server.log.slice(server.nextIndex[peer], lastIndex + 1),
       commitIndex: Math.min(server.commitIndex, lastIndex)});
-    server.rpcDue[peer] = model.time + ELECTION_TIMEOUT / 2;
-    server.nextIndex[peer] = lastIndex + 1;
+    server.rpcDue[peer] = model.time + RPC_TIMEOUT;
+    server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
   }
 };
 
@@ -170,7 +174,7 @@ rules.advanceCommitIndex = function(model, server) {
   var n = matchIndexes[Math.floor(NUM_SERVERS / 2)];
   if (server.state == 'leader' &&
       server.log.term(n) == server.term) {
-    server.commitIndex = n;
+    server.commitIndex = Math.max(server.commitIndex, n);
   }
 }
 
@@ -244,16 +248,17 @@ var handleAppendEntriesRequest = function(model, server, request) {
         (request.prevIndex <= server.log.len() &&
          server.log.term(request.prevIndex) == request.prevTerm)) {
       success = true;
-      var index = 0;
+      var index = request.prevIndex;
       for (var i = 0; i < request.entries.length; i += 1) {
-        index = request.prevIndex + 1 + i;
+        index += 1;
         if (server.log.term(index) != request.entries[i].term) {
           server.log.truncatePast(index - 1);
           server.log.append(request.entries[i]);
         }
       }
       matchIndex = index;
-      server.commitIndex = request.commitIndex;
+      server.commitIndex = Math.max(server.commitIndex,
+                                    request.commitIndex);
     }
   }
   sendReply(model, request, {
@@ -271,9 +276,11 @@ var handleAppendEntriesReply = function(model, server, reply) {
     if (reply.success) {
       server.matchIndex[reply.from] = Math.max(server.matchIndex[reply.from],
                                                reply.matchIndex);
+      server.nextIndex[reply.from] = reply.matchIndex + 1;
     } else {
       server.nextIndex[reply.from] = Math.max(1, server.nextIndex[reply.from] - 1);
     }
+    server.rpcDue[reply.from] = 0;
   }
 }
 
@@ -382,7 +389,7 @@ var arcSpec = function(spec, fraction) {
   var comma = ',';
   var radius = spec.r + ARC_WIDTH/2;
   var end = util.circleCoord(fraction, spec.cx, spec.cy, radius);
-  s = ['M', spec.cx, comma, spec.cy - radius];
+  var s = ['M', spec.cx, comma, spec.cy - radius];
   if (fraction > .5) {
     s.push('A', radius, comma, radius, '0 0,1', spec.cx, spec.cy + radius);
     s.push('M', spec.cx, comma, spec.cy + radius);
