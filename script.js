@@ -15,7 +15,6 @@ var ARC_WIDTH = 5;
 var playback;
 var getLeader;
 var modelHistory;
-var update;
 var render = {};
 
 $(function() {
@@ -137,7 +136,7 @@ model.servers.forEach(function (server) {
   model.servers.forEach(function(server) {
     $('#server-' + server.id + ' a', svg)
       .click(function() {
-        serverModal(server);
+        serverModal(model, server);
         return false;
       });
   });
@@ -281,7 +280,7 @@ render.messages = function(messagesSame) {
     model.messages.forEach(function(message, i) {
       $('a#message-' + i, svg)
         .click(function() {
-          messageModal(message);
+          messageModal(model, message);
           return false;
         });
     });
@@ -295,7 +294,12 @@ let relTime = function(time, now) {
   return sign + ((time - now) / 1e3).toFixed(3) + 'ms';
 };
 
-serverModal = function(server) {
+let button = function(label) {
+  return $('<button type="button" class="btn btn-default"></button>')
+    .text(label);
+};
+
+serverModal = function(model, server) {
   let m = $('#modal-details');
   $('.modal-title', m).text('Server ' + server.id);
   let li = function(label, value) {
@@ -332,10 +336,31 @@ serverModal = function(server) {
       .append($('<dt>peers</dt>'))
       .append($('<dd></dd>').append(peerTable))
     );
+  $('.modal-footer', m)
+    .empty()
+    .append(button('stop')
+      .click(function(){
+        raft.stop(model, server);
+        render.update();
+        m.modal('hide');
+      }))
+    .append(button('resume')
+      .click(function(){
+        raft.resume(model, server);
+        render.update();
+        m.modal('hide');
+      }))
+    .append(button('restart')
+      .click(function(){
+        raft.stop(model, server);
+        raft.resume(model, server);
+        render.update();
+        m.modal('hide');
+      }));
   m.modal();
 };
 
-messageModal = function(message) {
+messageModal = function(model, message) {
   let m = $('#modal-details');
   $('.modal-title', m).text(message.type + ' ' + message.direction);
   let li = function(label, value) {
@@ -371,10 +396,18 @@ messageModal = function(message) {
   $('.modal-body', m)
     .empty()
     .append(fields);
+  $('.modal-footer', m)
+    .empty()
+    .append(button('drop')
+      .click(function(){
+        raft.drop(model, message);
+        render.update();
+        m.modal('hide');
+      }));
   m.modal();
 };
 
-let update = function() {
+render.update = function() {
   raft.update(model);
 
   let last = modelHistory[modelHistory.length - 1];
@@ -409,7 +442,7 @@ window.setInterval(function() {
   if (playback.isPaused())
     return;
   model.time += 10 * 1000 / sliderTransform($('#speed').slider('getValue'));
-  update();
+  render.update();
 }, 10);
 
 $(window).keyup(function(e) {
@@ -421,7 +454,7 @@ $(window).keyup(function(e) {
       playback.endTimeTravel();
       leader.log.push({term: leader.term,
                        value: 'keypress'});
-      update();
+      render.update();
     }
   } else if (e.keyCode == 'R'.charCodeAt(0)) {
     let leader = getLeader();
@@ -429,7 +462,7 @@ $(window).keyup(function(e) {
       playback.endTimeTravel();
       raft.stop(model, leader);
       raft.resume(model, leader);
-      update();
+      render.update();
     }
   }
 });
@@ -474,7 +507,7 @@ timeSlider.on('slide', function() {
   let i = util.greatestLower(modelHistory, function(m) { return m.time > t; });
   model = util.clone(modelHistory[i]);
   model.time = t;
-  update();
+  render.update();
 });
 
 modelHistory = [util.clone(model)];

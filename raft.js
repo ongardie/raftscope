@@ -261,7 +261,7 @@ raft.update = function(model) {
   model.messages.forEach(function(message) {
     if (message.recvTime <= model.time)
       deliver.push(message);
-    else
+    else if (message.recvTime < Infinity)
       keep.push(message);
   });
   model.messages = keep;
@@ -282,6 +282,10 @@ raft.stop = function(model, server) {
 raft.resume = function(model, server) {
   server.state = 'follower';
   server.electionAlarm = makeElectionAlarm(model.time);
+};
+
+raft.drop = function(model, message) {
+  message.recvTime = Infinity;
 };
 
 })();
