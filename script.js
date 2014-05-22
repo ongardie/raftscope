@@ -218,7 +218,7 @@ render.logs = function() {
       $('<rect />')
         .attr(logSpec)
         .attr('class', 'log'));
-    server.log.entries.forEach(function(entry, i) {
+    server.log.forEach(function(entry, i) {
       let index = i + 1;
         logsGroup.append(render.entry({
           x: logSpec.x + i * 25,
@@ -410,8 +410,8 @@ $(window).keyup(function(e) {
     let leader = getLeader();
     if (leader !== null) {
       playback.endTimeTravel();
-      leader.log.append({term: leader.term,
-                         value: 'keypress'});
+      leader.log.push({term: leader.term,
+                       value: 'keypress'});
       update();
     }
   } else if (e.keyCode == 'R'.charCodeAt(0)) {

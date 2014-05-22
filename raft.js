@@ -34,34 +34,12 @@ let sendReply = function(model, request, reply) {
   sendMessage(model, reply);
 };
 
-let makeLog = function() {
-  let entries = [];
-  return {
-    entries: entries,
-    at: function(index) {
-      return entries[index - 1];
-    },
-    len: function() {
-      return entries.length;
-    },
-    term: function(index) {
-      if (index < 1 || index > entries.length) {
-        return 0;
-      } else {
-        return entries[index - 1].term;
-      }
-    },
-    slice: function(startIndexIncl, endIndexExcl) {
-      return entries.slice(startIndexIncl - 1, endIndexExcl - 1);
-    },
-    append: function(entry) {
-      entries.push(entry);
-    },
-    truncatePast: function(index) {
-      while (entries.length > index)
-        entries.pop();
-    },
-  };
+let logTerm = function(log, index) {
+  if (index < 1 || index > log.length) {
+    return 0;
+  } else {
+    return log[index - 1].term;
+  }
 };
 
 let rules = {};
@@ -77,7 +55,7 @@ raft.server = function(id, peers) {
     state: 'follower',
     term: 1,
     votedFor: null,
-    log: makeLog(),
+    log: [],
     commitIndex: 0,
     electionAlarm: makeElectionAlarm(0),
     voteGranted:  util.makeMap(peers, false),
@@ -121,8 +99,8 @@ rules.sendRequestVote = function(model, server, peer) {
       to: peer,
       type: 'RequestVote',
       term: server.term,
-      lastLogTerm: server.log.term(server.log.len()),
-      lastLogIndex: server.log.len()});
+      lastLogTerm: logTerm(server.log, server.log.length),
+      lastLogIndex: server.log.length});
   }
 };
 
@@ -131,7 +109,7 @@ rules.becomeLeader = function(model, server) {
       util.countTrue(util.mapValues(server.voteGranted)) + 1 > Math.floor(NUM_SERVERS / 2)) {
     console.log('server ' + server.id + ' is leader in term ' + server.term);
     server.state = 'leader';
-    server.nextIndex    = util.makeMap(server.peers, server.log.len() + 1);
+    server.nextIndex    = util.makeMap(server.peers, server.log.length + 1);
     server.rpcDue       = util.makeMap(server.peers, Infinity);
     server.heartbeatDue = util.makeMap(server.peers, 0);
     server.electionAlarm = Infinity;
@@ -141,11 +119,11 @@ rules.becomeLeader = function(model, server) {
 rules.sendAppendEntries = function(model, server, peer) {
   if (server.state == 'leader' &&
       (server.heartbeatDue[peer] < model.time ||
-       (server.nextIndex[peer] <= server.log.len() &&
+       (server.nextIndex[peer] <= server.log.length &&
         server.rpcDue[peer] < model.time))) {
     let prevIndex = server.nextIndex[peer] - 1;
     let lastIndex = Math.min(prevIndex + BATCH_SIZE,
-                             server.log.len());
+                             server.log.length);
     if (server.matchIndex[peer] + 1 < server.nextIndex[peer])
       lastIndex = prevIndex;
     sendRequest(model, {
@@ -154,8 +132,8 @@ rules.sendAppendEntries = function(model, server, peer) {
       type: 'AppendEntries',
       term: server.term,
       prevIndex: prevIndex,
-      prevTerm: server.log.term(prevIndex),
-      entries: server.log.slice(prevIndex + 1, lastIndex + 1),
+      prevTerm: logTerm(server.log, prevIndex),
+      entries: server.log.slice(prevIndex, lastIndex),
       commitIndex: Math.min(server.commitIndex, lastIndex)});
     server.rpcDue[peer] = model.time + RPC_TIMEOUT;
     server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
@@ -163,11 +141,11 @@ rules.sendAppendEntries = function(model, server, peer) {
 };
 
 rules.advanceCommitIndex = function(model, server) {
-  let matchIndexes = util.mapValues(server.matchIndex).concat(server.log.len());
+  let matchIndexes = util.mapValues(server.matchIndex).concat(server.log.length);
   matchIndexes.sort();
   let n = matchIndexes[Math.floor(NUM_SERVERS / 2)];
   if (server.state == 'leader' &&
-      server.log.term(n) == server.term) {
+      logTerm(server.log, n) == server.term) {
     server.commitIndex = Math.max(server.commitIndex, n);
   }
 };
@@ -179,9 +157,9 @@ let handleRequestVoteRequest = function(model, server, request) {
   if (server.term == request.term &&
       (server.votedFor === null ||
        server.votedFor == request.from) &&
-      (request.lastLogTerm > server.log.term(server.log.len()) ||
-       (request.lastLogTerm == server.log.term(server.log.len()) &&
-        request.lastLogIndex >= server.log.len()))) {
+      (request.lastLogTerm > logTerm(server.log, server.log.length) ||
+       (request.lastLogTerm == logTerm(server.log, server.log.length) &&
+        request.lastLogIndex >= server.log.length))) {
     granted = true;
     server.votedFor = request.from;
     server.electionAlarm = makeElectionAlarm(model.time);
@@ -211,15 +189,16 @@ let handleAppendEntriesRequest = function(model, server, request) {
     server.state = 'follower';
     server.electionAlarm = makeElectionAlarm(model.time);
     if (request.prevLogIndex === 0 ||
-        (request.prevIndex <= server.log.len() &&
-         server.log.term(request.prevIndex) == request.prevTerm)) {
+        (request.prevIndex <= server.log.length &&
+         logTerm(server.log, request.prevIndex) == request.prevTerm)) {
       success = true;
       let index = request.prevIndex;
       for (let i = 0; i < request.entries.length; i += 1) {
         index += 1;
-        if (server.log.term(index) != request.entries[i].term) {
-          server.log.truncatePast(index - 1);
-          server.log.append(request.entries[i]);
+        if (logTerm(server.log, index) != request.entries[i].term) {
+          while (server.log.length > index - 1)
+            server.log.pop();
+          server.log.push(request.entries[i]);
         }
       }
       matchIndex = index;
