@@ -5,7 +5,7 @@ var RPC_TIMEOUT = 50000;
 var RPC_LATENCY = 10000;
 var ELECTION_TIMEOUT = 100000;
 var ARC_WIDTH = 5;
-var BATCH_SIZE = 2;
+var BATCH_SIZE = 1;
 var rules = {};
 var playback;
 var getLeader;
