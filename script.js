@@ -670,8 +670,7 @@ setInterval(function() {
   if (!serversSame || !messagesSame)
     history.push(util.clone(model));
   renderClock();
-  if (!serversSame)
-    renderServers();
+  renderServers();
   renderMessages(messagesSame);
   if (!serversSame)
     renderLogs();
