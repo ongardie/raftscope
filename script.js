@@ -1,3 +1,8 @@
+/* jshint esnext: true */
+/* jshint globalstrict: true */
+/* jshint browser: true */
+/* jshint devel: true */
+/* jshint jquery: true */
 'use strict';
 
 let svg;
@@ -11,7 +16,7 @@ let BATCH_SIZE = 1;
 let rules = {};
 let playback;
 let getLeader;
-let history;
+let modelHistory;
 let update;
 let render = {};
 
@@ -29,9 +34,10 @@ playback = function() {
   let resume = function() {
     if (paused) {
       paused = false;
-      let i = util.greatestLower(history, function(m) { return m.time > model.time; });
-      while (history.length - 1 > i)
-        history.pop();
+      let i = util.greatestLower(modelHistory,
+                                 function(m) { return m.time > model.time; });
+      while (modelHistory.length - 1 > i)
+        modelHistory.pop();
       timeTravel = false;
     }
   };
@@ -107,7 +113,7 @@ util.value = function(v) {
 };
 
 util.circleCoord = function(frac, cx, cy, r) {
-  let radians = 2 * Math.PI * (.75 + frac);
+  let radians = 2 * Math.PI * (0.75 + frac);
   return {
     x: cx + r * Math.cos(radians),
     y: cy + r * Math.sin(radians),
@@ -135,7 +141,7 @@ util.mapValues = function(m) {
   return $.map(m, function(v) { return v; });
 };
 
-let Server = function(id, peers) {
+let server = function(id, peers) {
   return {
     id: id,
     peers: peers,
@@ -152,6 +158,26 @@ let Server = function(id, peers) {
     heartbeatDue: util.makeMap(peers, 0),
   };
 };
+
+let sendMessage = function(model, message) {
+  message.sendTime = model.time;
+  message.recvTime = model.time + (1 + (0.5 * (Math.random() - 0.5))) * RPC_LATENCY;
+  model.messages.push(message);
+};
+
+let sendRequest = function(model, request) {
+  request.direction = 'request';
+  sendMessage(model, request);
+};
+
+let sendReply = function(model, request, reply) {
+  reply.from = request.to;
+  reply.to = request.from;
+  reply.type = request.type;
+  reply.direction = 'reply';
+  sendMessage(model, reply);
+};
+
 
 rules.startNewElection = function(model, server) {
   if ((server.state == 'follower' || server.state == 'candidate') &&
@@ -226,7 +252,7 @@ rules.advanceCommitIndex = function(model, server) {
       server.log.term(n) == server.term) {
     server.commitIndex = Math.max(server.commitIndex, n);
   }
-}
+};
 
 let stepDown = function(model, server, term) {
   server.term = term;
@@ -237,31 +263,12 @@ let stepDown = function(model, server, term) {
   }
 };
 
-let sendMessage = function(model, message) {
-  message.sendTime = model.time;
-  message.recvTime = model.time + (1 + (.5 * (Math.random() - .5))) * RPC_LATENCY;
-  model.messages.push(message);
-};
-
-let sendRequest = function(model, request) {
-  request.direction = 'request';
-  sendMessage(model, request);
-};
-
-let sendReply = function(model, request, reply) {
-  reply.from = request.to;
-  reply.to = request.from;
-  reply.type = request.type;
-  reply.direction = 'reply';
-  sendMessage(model, reply);
-};
-
 let handleRequestVoteRequest = function(model, server, request) {
   if (server.term < request.term)
     stepDown(model, server, request.term);
   let granted = false;
   if (server.term == request.term &&
-      (server.votedFor == null ||
+      (server.votedFor === null ||
        server.votedFor == request.from) &&
       (request.lastLogTerm > server.log.term(server.log.len()) ||
        (request.lastLogTerm == server.log.term(server.log.len()) &&
@@ -284,7 +291,7 @@ let handleRequestVoteReply = function(model, server, reply) {
     server.rpcDue[reply.from] = Infinity;
     server.voteGranted[reply.from] = reply.granted;
   }
-}
+};
 
 let handleAppendEntriesRequest = function(model, server, request) {
   let success = false;
@@ -294,7 +301,7 @@ let handleAppendEntriesRequest = function(model, server, request) {
   if (server.term == request.term) {
     server.state = 'follower';
     server.electionAlarm = makeElectionAlarm(model);
-    if (request.prevLogIndex == 0 ||
+    if (request.prevLogIndex === 0 ||
         (request.prevIndex <= server.log.len() &&
          server.log.term(request.prevIndex) == request.prevTerm)) {
       success = true;
@@ -332,7 +339,7 @@ let handleAppendEntriesReply = function(model, server, reply) {
     }
     server.rpcDue[reply.from] = 0;
   }
-}
+};
 
 let handleMessage = function(model, server, message) {
   if (message.type == 'RequestVote') {
@@ -355,7 +362,7 @@ let handleMessage = function(model, server, message) {
         if (i != j)
           peers.push(j);
       }
-      model.servers.push(Server(i, peers));
+      model.servers.push(server(i, peers));
   }
 })();
 
@@ -390,6 +397,9 @@ util.reparseSVG = function(node) {
 };
 
 $('#ring', svg).attr(ringSpec);
+
+let serverModal;
+let messageModal;
 
 model.servers.forEach(function (server) {
   let s = serverSpec(server.id);
@@ -435,13 +445,15 @@ let arcSpec = function(spec, fraction) {
   let radius = spec.r + ARC_WIDTH/2;
   let end = util.circleCoord(fraction, spec.cx, spec.cy, radius);
   let s = ['M', spec.cx, comma, spec.cy - radius];
-  if (fraction > .5) {
+  if (fraction > 0.5) {
     s.push('A', radius, comma, radius, '0 0,1', spec.cx, spec.cy + radius);
     s.push('M', spec.cx, comma, spec.cy + radius);
   }
   s.push('A', radius, comma, radius, '0 0,1', end.x, end.y);
   return s.join(' ');
 };
+
+let timeSlider;
 
 render.clock = function() {
   if (playback.isTimeTraveling())
@@ -486,9 +498,9 @@ render.logs = function() {
   let leader = getLeader();
   model.servers.forEach(function(server) {
     let logSpec = {
-      x: logsSpec.x + logsSpec.width * .05,
+      x: logsSpec.x + logsSpec.width * 0.05,
       y: logsSpec.y + height * server.id - 5*height/6,
-      width: logsSpec.width * .9,
+      width: logsSpec.width * 0.9,
       height: 2*height/3,
     };
     logsGroup.append(
@@ -504,7 +516,7 @@ render.logs = function() {
           height: logSpec.height,
         }, entry, index <= server.commitIndex));
     });
-    if (leader != null && leader != server) {
+    if (leader !== null && leader != server) {
       logsGroup.append(
         $('<circle />')
           .attr({cx: logSpec.x + leader.matchIndex[server.id] * 25,
@@ -562,9 +574,9 @@ let relTime = function(time, now) {
     return 'infinity';
   let sign = time > now ? '+' : '';
   return sign + ((time - now) / 1e3).toFixed(3) + 'ms';
-}
+};
 
-let serverModal = function(server) {
+serverModal = function(server) {
   let m = $('#modal-details');
   $('.modal-title', m).text('Server ' + server.id);
   let li = function(label, value) {
@@ -603,7 +615,7 @@ let serverModal = function(server) {
   m.modal();
 };
 
-let messageModal = function(message) {
+messageModal = function(message) {
   let m = $('#modal-details');
   $('.modal-title', m).text(message.type + ' ' + message.direction);
   let li = function(label, value) {
@@ -709,7 +721,7 @@ let update = function() {
     });
   });
 
-  let last = history[history.length - 1];
+  let last = modelHistory[modelHistory.length - 1];
   let serversSame = util.equals(last.servers, model.servers);
   let messagesSame = util.equals(last.messages, model.messages);
   if (playback.isTimeTraveling()) {
@@ -717,7 +729,7 @@ let update = function() {
     messagesSame = false;
   } else {
     if (!serversSame || !messagesSame)
-      history.push(util.clone(model));
+      modelHistory.push(util.clone(model));
   }
   render.clock();
   render.servers();
@@ -726,7 +738,18 @@ let update = function() {
     render.logs();
 };
 
-setInterval(function() {
+
+let sliderTransform = function(v) {
+  v = Math.pow(v, 3) + 100;
+  if (v < 1)
+    return 1;
+  else if (v > 1000)
+    return 1000;
+  else
+    return v;
+};
+
+window.setInterval(function() {
   if (playback.isPaused())
     return;
   model.time += 10 * 1000 / sliderTransform($('#speed').slider('getValue'));
@@ -738,7 +761,7 @@ $(window).keyup(function(e) {
     playback.toggle();
   } else if (e.keyCode == 'C'.charCodeAt(0)) {
     let leader = getLeader();
-    if (leader != null) {
+    if (leader !== null) {
       playback.endTimeTravel();
       leader.log.append({term: leader.term,
                          value: 'keypress'});
@@ -746,7 +769,7 @@ $(window).keyup(function(e) {
     }
   } else if (e.keyCode == 'R'.charCodeAt(0)) {
     let leader = getLeader();
-    if (leader != null) {
+    if (leader !== null) {
       playback.endTimeTravel();
       stepDown(model, leader, leader.term);
       update();
@@ -771,16 +794,6 @@ getLeader = function() {
   return leader;
 };
 
-let sliderTransform = function(v) {
-  v = Math.pow(v, 3) + 100;
-  if (v < 1)
-    return 1;
-  else if (v > 1000)
-    return 1000;
-  else
-    return v;
-}
-
 $("#speed").slider({
   tooltip: 'always',
   formater: function(value) {
@@ -800,9 +813,9 @@ util.greatestLower = function(a, gt) {
       return bs(mid + 1, high);
   };
   return bs(0, a.length - 1);
-}
+};
 
-let timeSlider = $('#time');
+timeSlider = $('#time');
 timeSlider.slider({
   tooltip: 'always',
   formater: function(value) {
@@ -814,14 +827,14 @@ timeSlider.on('slideStart', function() {
 });
 timeSlider.on('slide', function() {
   let t = timeSlider.slider('getValue');
-  let i = util.greatestLower(history, function(m) { return m.time > t; });
-  model = util.clone(history[i]);
+  let i = util.greatestLower(modelHistory, function(m) { return m.time > t; });
+  model = util.clone(modelHistory[i]);
   model.time = t;
   update();
 });
 
-history = [util.clone(model)];
+modelHistory = [util.clone(model)];
 model.servers[0].electionAlarm = 10;
-history.push(util.clone(model));
+modelHistory.push(util.clone(model));
 });
 
