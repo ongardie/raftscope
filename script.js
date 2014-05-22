@@ -23,6 +23,12 @@ $(function() {
 playback = function() {
   let timeTravel = false;
   let paused = false;
+  let pause = function() {
+    paused = true;
+    $('#time-icon')
+      .removeClass('glyphicon-time')
+      .addClass('glyphicon-pause');
+  }
   let resume = function() {
     if (paused) {
       paused = false;
@@ -31,30 +37,31 @@ playback = function() {
       while (modelHistory.length - 1 > i)
         modelHistory.pop();
       timeTravel = false;
+      $('#time-icon')
+        .removeClass('glyphicon-pause')
+        .addClass('glyphicon-time');
     }
   };
   return {
-    pause: function() {
-      paused = true;
-    },
+    pause: pause,
     resume: resume,
     toggle: function() {
       if (paused)
         resume();
       else
-        paused = true;
+        pause();
     },
     isPaused: function() {
       return paused;
     },
     startTimeTravel: function() {
-      paused = true;
+      pause();
       timeTravel = true;
     },
     endTimeTravel: function() {
       if (timeTravel) {
         resume();
-        paused = true;
+        pause();
       }
     },
     isTimeTraveling: function() {
