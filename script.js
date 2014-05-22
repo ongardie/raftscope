@@ -5,6 +5,7 @@ var RPC_TIMEOUT = 50000;
 var RPC_LATENCY = 10000;
 var ELECTION_TIMEOUT = 100000;
 var ARC_WIDTH = 5;
+var BATCH_SIZE = 2;
 var rules = {};
 var pause = false;
 var getLeader;
@@ -152,17 +153,17 @@ rules.sendAppendEntries = function(model, server, peer) {
       (server.heartbeatDue[peer] < model.time ||
        (server.nextIndex[peer] <= server.log.len() &&
         server.rpcDue[peer] < model.time))) {
-    var lastIndex = server.nextIndex[peer];
-    if (lastIndex > server.log.len())
-      lastIndex -= 1;
+    var prevIndex = server.nextIndex[peer] - 1;
+    var lastIndex = Math.min(prevIndex + BATCH_SIZE,
+                             server.log.len());
     sendRequest(model, {
       from: server.id,
       to: peer,
       type: 'AppendEntries',
       term: server.term,
-      prevIndex: server.nextIndex[peer] - 1,
-      prevTerm: server.log.term(server.nextIndex[peer] - 1),
-      entries: server.log.slice(server.nextIndex[peer], lastIndex + 1),
+      prevIndex: prevIndex,
+      prevTerm: server.log.term(prevIndex),
+      entries: server.log.slice(prevIndex + 1, lastIndex + 1),
       commitIndex: Math.min(server.commitIndex, lastIndex)});
     server.rpcDue[peer] = model.time + RPC_TIMEOUT;
     server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
