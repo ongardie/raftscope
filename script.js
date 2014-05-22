@@ -186,7 +186,7 @@ var stepDown = function(model, server, term) {
   server.term = term;
   server.state = 'follower';
   server.votedFor = null;
-  if (server.electionAlarm < model.time) {
+  if (server.electionAlarm < model.time || server.electionAlarm == Infinity) {
     server.electionAlarm = makeElectionAlarm(model);
   }
 };
@@ -678,8 +678,19 @@ setInterval(function() {
 }, 10);
 
 $(window).keyup(function(e) {
-  if (e.keyCode == 32) { // space
+  if (e.keyCode == ' '.charCodeAt(0)) {
     pause = !pause;
+  } else if (e.keyCode == 'C'.charCodeAt(0)) {
+    var leader = getLeader();
+    if (leader != null) {
+      leader.log.append({term: leader.term,
+                         value: 'keypress'});
+    }
+  } else if (e.keyCode == 'R'.charCodeAt(0)) {
+    var leader = getLeader();
+    if (leader != null) {
+      stepDown(model, leader, leader.term);
+    }
   }
 });
 
