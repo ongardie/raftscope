@@ -8,6 +8,7 @@ var ARC_WIDTH = 5;
 var rules = {};
 var pause = false;
 var getLeader;
+var history;
 
 var util = {};
 
@@ -475,28 +476,38 @@ var renderLogs = function() {
   util.reparseSVG(logsGroup);
 };
 
-var renderMessages = function() {
+var renderMessages = function(messagesSame) {
   var messagesGroup = $('#messages', svg);
-  messagesGroup.empty();
-  model.messages.forEach(function(message, i) {
-    var s = messageSpec(message.from, message.to,
-                        (model.time - message.sendTime) /
-                        (message.recvTime - message.sendTime));
-    messagesGroup.append(
-      $('<a xlink:href="#"></a>')
-        .attr('id', 'message-' + i)
-        .append($('<circle />')
-          .attr('class', 'message ' + message.direction)
-          .attr(s)));
-  });
-  util.reparseSVG(messagesGroup);
-  model.messages.forEach(function(message, i) {
-    $('a#message-' + i, svg)
-      .click(function() {
-        messageModal(message);
-        return false;
-      });
-  });
+  if (messagesSame) {
+    model.messages.forEach(function(message, i) {
+      var s = messageSpec(message.from, message.to,
+                          (model.time - message.sendTime) /
+                          (message.recvTime - message.sendTime));
+      $('#message-' + i + ' circle', messagesGroup)
+        .attr(s);
+    });
+  } else {
+    messagesGroup.empty();
+    model.messages.forEach(function(message, i) {
+      var s = messageSpec(message.from, message.to,
+                          (model.time - message.sendTime) /
+                          (message.recvTime - message.sendTime));
+      messagesGroup.append(
+        $('<a xlink:href="#"></a>')
+          .attr('id', 'message-' + i)
+          .append($('<circle />')
+            .attr('class', 'message ' + message.direction)
+            .attr(s)));
+    });
+    util.reparseSVG(messagesGroup);
+    model.messages.forEach(function(message, i) {
+      $('a#message-' + i, svg)
+        .click(function() {
+          messageModal(message);
+          return false;
+        });
+    });
+  }
 };
 
 var relTime = function(time, now) {
@@ -580,6 +591,46 @@ var messageModal = function(message) {
   m.modal();
 };
 
+util.clone = function(object) {
+  return jQuery.extend(true, {}, object);
+};
+
+// From http://stackoverflow.com/a/6713782
+util.equals = function(x, y) {
+  if ( x === y ) return true;
+    // if both x and y are null or undefined and exactly the same
+
+  if ( ! ( x instanceof Object ) || ! ( y instanceof Object ) ) return false;
+    // if they are not strictly equal, they both need to be Objects
+
+  if ( x.constructor !== y.constructor ) return false;
+    // they must have the exact same prototype chain, the closest we can do is
+    // test there constructor.
+
+  for ( var p in x ) {
+    if ( ! x.hasOwnProperty( p ) ) continue;
+      // other properties were tested using x.constructor === y.constructor
+
+    if ( ! y.hasOwnProperty( p ) ) return false;
+      // allows to compare x[ p ] and y[ p ] when set to undefined
+
+    if ( x[ p ] === y[ p ] ) continue;
+      // if they have the same strict value or identity then they are equal
+
+    if ( typeof( x[ p ] ) !== "object" ) return false;
+      // Numbers, Strings, Functions, Booleans must be strictly equal
+
+    if ( ! util.equals( x[ p ],  y[ p ] ) ) return false;
+      // Objects and Arrays must be tested recursively
+  }
+
+  for ( p in y ) {
+    if ( y.hasOwnProperty( p ) && ! x.hasOwnProperty( p ) ) return false;
+      // allows x[ p ] to be set to undefined
+  }
+  return true;
+};
+
 setInterval(function() {
   if (pause)
     return;
@@ -610,10 +661,17 @@ setInterval(function() {
     });
   });
 
+  var last = history[history.length - 1];
+  var serversSame = util.equals(last.servers, model.servers);
+  var messagesSame = util.equals(last.messages, model.messages);
+  if (!serversSame || !messagesSame)
+    history.push(util.clone(model));
   renderClock();
-  renderServers();
-  renderMessages();
-  renderLogs();
+  if (!serversSame)
+    renderServers();
+  renderMessages(messagesSame);
+  if (!serversSame)
+    renderLogs();
 }, 10);
 
 $(window).keyup(function(e) {
@@ -640,8 +698,9 @@ getLeader = function() {
   return leader;
 };
 
+history = [util.clone(model)];
 model.servers[0].log.append({term: 1, value: 'hello'});
 model.servers[0].log.append({term: 1, value: 'world'});
 model.servers[0].electionAlarm = 10;
-
+history.push(util.clone(model));
 });
