@@ -3,30 +3,22 @@
 /* jshint browser: true */
 /* jshint devel: true */
 /* jshint jquery: true */
+/* global util */
+/* global raft */
+/* global ELECTION_TIMEOUT */
+/* global NUM_SERVERS */
 'use strict';
 
 var svg;
 var model;
-var NUM_SERVERS = 5;
-var RPC_TIMEOUT = 50000;
-var RPC_LATENCY = 10000;
-var ELECTION_TIMEOUT = 100000;
 var ARC_WIDTH = 5;
-var BATCH_SIZE = 1;
-var rules = {};
 var playback;
 var getLeader;
 var modelHistory;
 var update;
 var render = {};
 
-var util = {};
-
 $(function() {
-
-let makeElectionAlarm = function(model) {
-  return model.time + (Math.random() + 1) * ELECTION_TIMEOUT;
-};
 
 playback = function() {
   let timeTravel = false;
@@ -78,283 +70,6 @@ model = {
   seed: 0,
 };
 
-let makeLog = function() {
-  let entries = [];
-  return {
-    entries: entries,
-    at: function(index) {
-      return entries[index - 1];
-    },
-    len: function() {
-      return entries.length;
-    },
-    term: function(index) {
-      if (index < 1 || index > entries.length) {
-        return 0;
-      } else {
-        return entries[index - 1].term;
-      }
-    },
-    slice: function(startIndexIncl, endIndexExcl) {
-      return entries.slice(startIndexIncl - 1, endIndexExcl - 1);
-    },
-    append: function(entry) {
-      entries.push(entry);
-    },
-    truncatePast: function(index) {
-      while (entries.length > index)
-        entries.pop();
-    },
-  };
-};
-
-util.value = function(v) {
-  return function() { return v; };
-};
-
-util.circleCoord = function(frac, cx, cy, r) {
-  let radians = 2 * Math.PI * (0.75 + frac);
-  return {
-    x: cx + r * Math.cos(radians),
-    y: cy + r * Math.sin(radians),
-  };
-};
-
-util.countTrue = function(bools) {
-  let count = 0;
-  bools.forEach(function(b) {
-    if (b)
-      count += 1;
-  });
-  return count;
-};
-
-util.makeMap = function(keys, value) {
-  let m = {};
-  keys.forEach(function(key) {
-    m[key] = value;
-  });
-  return m;
-};
-
-util.mapValues = function(m) {
-  return $.map(m, function(v) { return v; });
-};
-
-let server = function(id, peers) {
-  return {
-    id: id,
-    peers: peers,
-    state: 'follower',
-    term: 1,
-    votedFor: null,
-    log: makeLog(),
-    commitIndex: 0,
-    electionAlarm: makeElectionAlarm(model),
-    voteGranted:  util.makeMap(peers, false),
-    matchIndex:   util.makeMap(peers, 0),
-    nextIndex:    util.makeMap(peers, 1),
-    rpcDue:       util.makeMap(peers, 0),
-    heartbeatDue: util.makeMap(peers, 0),
-  };
-};
-
-let sendMessage = function(model, message) {
-  message.sendTime = model.time;
-  message.recvTime = model.time + (1 + (0.5 * (Math.random() - 0.5))) * RPC_LATENCY;
-  model.messages.push(message);
-};
-
-let sendRequest = function(model, request) {
-  request.direction = 'request';
-  sendMessage(model, request);
-};
-
-let sendReply = function(model, request, reply) {
-  reply.from = request.to;
-  reply.to = request.from;
-  reply.type = request.type;
-  reply.direction = 'reply';
-  sendMessage(model, reply);
-};
-
-
-rules.startNewElection = function(model, server) {
-  if ((server.state == 'follower' || server.state == 'candidate') &&
-      server.electionAlarm < model.time) {
-    server.electionAlarm = makeElectionAlarm(model);
-    server.term += 1;
-    server.votedFor = server.id;
-    server.state = 'candidate';
-    server.voteGranted  = util.makeMap(server.peers, false);
-    server.matchIndex   = util.makeMap(server.peers, 0);
-    server.nextIndex    = util.makeMap(server.peers, 1);
-    server.rpcDue       = util.makeMap(server.peers, 0);
-    server.heartbeatDue = util.makeMap(server.peers, 0);
-  }
-};
-
-rules.sendRequestVote = function(model, server, peer) {
-  if (server.state == 'candidate' &&
-      server.rpcDue[peer] < model.time) {
-    server.rpcDue[peer] = model.time + RPC_TIMEOUT;
-    sendRequest(model, {
-      from: server.id,
-      to: peer,
-      type: 'RequestVote',
-      term: server.term,
-      lastLogTerm: server.log.term(server.log.len()),
-      lastLogIndex: server.log.len()});
-  }
-};
-
-rules.becomeLeader = function(model, server) {
-  if (server.state == 'candidate' &&
-      util.countTrue(util.mapValues(server.voteGranted)) + 1 > Math.floor(NUM_SERVERS / 2)) {
-    console.log('server ' + server.id + ' is leader in term ' + server.term);
-    server.state = 'leader';
-    server.nextIndex    = util.makeMap(server.peers, server.log.len() + 1);
-    server.rpcDue       = util.makeMap(server.peers, Infinity);
-    server.heartbeatDue = util.makeMap(server.peers, 0);
-    server.electionAlarm = Infinity;
-  }
-};
-
-rules.sendAppendEntries = function(model, server, peer) {
-  if (server.state == 'leader' &&
-      (server.heartbeatDue[peer] < model.time ||
-       (server.nextIndex[peer] <= server.log.len() &&
-        server.rpcDue[peer] < model.time))) {
-    let prevIndex = server.nextIndex[peer] - 1;
-    let lastIndex = Math.min(prevIndex + BATCH_SIZE,
-                             server.log.len());
-    if (server.matchIndex[peer] + 1 < server.nextIndex[peer])
-      lastIndex = prevIndex;
-    sendRequest(model, {
-      from: server.id,
-      to: peer,
-      type: 'AppendEntries',
-      term: server.term,
-      prevIndex: prevIndex,
-      prevTerm: server.log.term(prevIndex),
-      entries: server.log.slice(prevIndex + 1, lastIndex + 1),
-      commitIndex: Math.min(server.commitIndex, lastIndex)});
-    server.rpcDue[peer] = model.time + RPC_TIMEOUT;
-    server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
-  }
-};
-
-rules.advanceCommitIndex = function(model, server) {
-  let matchIndexes = util.mapValues(server.matchIndex).concat(server.log.len());
-  matchIndexes.sort();
-  let n = matchIndexes[Math.floor(NUM_SERVERS / 2)];
-  if (server.state == 'leader' &&
-      server.log.term(n) == server.term) {
-    server.commitIndex = Math.max(server.commitIndex, n);
-  }
-};
-
-let stepDown = function(model, server, term) {
-  server.term = term;
-  server.state = 'follower';
-  server.votedFor = null;
-  if (server.electionAlarm < model.time || server.electionAlarm == Infinity) {
-    server.electionAlarm = makeElectionAlarm(model);
-  }
-};
-
-let handleRequestVoteRequest = function(model, server, request) {
-  if (server.term < request.term)
-    stepDown(model, server, request.term);
-  let granted = false;
-  if (server.term == request.term &&
-      (server.votedFor === null ||
-       server.votedFor == request.from) &&
-      (request.lastLogTerm > server.log.term(server.log.len()) ||
-       (request.lastLogTerm == server.log.term(server.log.len()) &&
-        request.lastLogIndex >= server.log.len()))) {
-    granted = true;
-    server.votedFor = request.from;
-    server.electionAlarm = makeElectionAlarm(model);
-  }
-  sendReply(model, request, {
-    term: server.term,
-    granted: granted,
-  });
-};
-
-let handleRequestVoteReply = function(model, server, reply) {
-  if (server.term < reply.term)
-    stepDown(model, server, reply.term);
-  if (server.state == 'candidate' &&
-      server.term == reply.term) {
-    server.rpcDue[reply.from] = Infinity;
-    server.voteGranted[reply.from] = reply.granted;
-  }
-};
-
-let handleAppendEntriesRequest = function(model, server, request) {
-  let success = false;
-  let matchIndex = 0;
-  if (server.term < request.term)
-    stepDown(model, server, request.term);
-  if (server.term == request.term) {
-    server.state = 'follower';
-    server.electionAlarm = makeElectionAlarm(model);
-    if (request.prevLogIndex === 0 ||
-        (request.prevIndex <= server.log.len() &&
-         server.log.term(request.prevIndex) == request.prevTerm)) {
-      success = true;
-      let index = request.prevIndex;
-      for (let i = 0; i < request.entries.length; i += 1) {
-        index += 1;
-        if (server.log.term(index) != request.entries[i].term) {
-          server.log.truncatePast(index - 1);
-          server.log.append(request.entries[i]);
-        }
-      }
-      matchIndex = index;
-      server.commitIndex = Math.max(server.commitIndex,
-                                    request.commitIndex);
-    }
-  }
-  sendReply(model, request, {
-    term: server.term,
-    success: success,
-    matchIndex: matchIndex,
-  });
-};
-
-let handleAppendEntriesReply = function(model, server, reply) {
-  if (server.term < reply.term)
-    stepDown(model, server, reply.term);
-  if (server.state == 'leader' &&
-      server.term == reply.term) {
-    if (reply.success) {
-      server.matchIndex[reply.from] = Math.max(server.matchIndex[reply.from],
-                                               reply.matchIndex);
-      server.nextIndex[reply.from] = reply.matchIndex + 1;
-    } else {
-      server.nextIndex[reply.from] = Math.max(1, server.nextIndex[reply.from] - 1);
-    }
-    server.rpcDue[reply.from] = 0;
-  }
-};
-
-let handleMessage = function(model, server, message) {
-  if (message.type == 'RequestVote') {
-    if (message.direction == 'request')
-      handleRequestVoteRequest(model, server, message);
-    else
-      handleRequestVoteReply(model, server, message);
-  } else if (message.type == 'AppendEntries') {
-    if (message.direction == 'request')
-      handleAppendEntriesRequest(model, server, message);
-    else
-      handleAppendEntriesReply(model, server, message);
-  }
-};
-
 (function() {
   for (let i = 1; i <= NUM_SERVERS; i += 1) {
       let peers = [];
@@ -362,7 +77,7 @@ let handleMessage = function(model, server, message) {
         if (i != j)
           peers.push(j);
       }
-      model.servers.push(server(i, peers));
+      model.servers.push(raft.server(i, peers));
   }
 })();
 
@@ -390,10 +105,6 @@ let serverSpec = function(id) {
     cy: coord.y,
     r: 30,
   };
-};
-
-util.reparseSVG = function(node) {
-  node.html(node.html()); // reparse as SVG after adding nodes
 };
 
 $('#ring', svg).attr(ringSpec);
@@ -654,72 +365,8 @@ messageModal = function(message) {
   m.modal();
 };
 
-util.clone = function(object) {
-  return jQuery.extend(true, {}, object);
-};
-
-// From http://stackoverflow.com/a/6713782
-util.equals = function(x, y) {
-  if ( x === y ) return true;
-    // if both x and y are null or undefined and exactly the same
-
-  if ( ! ( x instanceof Object ) || ! ( y instanceof Object ) ) return false;
-    // if they are not strictly equal, they both need to be Objects
-
-  if ( x.constructor !== y.constructor ) return false;
-    // they must have the exact same prototype chain, the closest we can do is
-    // test there constructor.
-
-  for ( let p in x ) {
-    if ( ! x.hasOwnProperty( p ) ) continue;
-      // other properties were tested using x.constructor === y.constructor
-
-    if ( ! y.hasOwnProperty( p ) ) return false;
-      // allows to compare x[ p ] and y[ p ] when set to undefined
-
-    if ( x[ p ] === y[ p ] ) continue;
-      // if they have the same strict value or identity then they are equal
-
-    if ( typeof( x[ p ] ) !== "object" ) return false;
-      // Numbers, Strings, Functions, Booleans must be strictly equal
-
-    if ( ! util.equals( x[ p ],  y[ p ] ) ) return false;
-      // Objects and Arrays must be tested recursively
-  }
-
-  for ( let p in y ) {
-    if ( y.hasOwnProperty( p ) && ! x.hasOwnProperty( p ) ) return false;
-      // allows x[ p ] to be set to undefined
-  }
-  return true;
-};
-
 let update = function() {
-  model.servers.forEach(function(server) {
-    rules.startNewElection(model, server);
-    rules.becomeLeader(model, server);
-    rules.advanceCommitIndex(model, server);
-    server.peers.forEach(function(peer) {
-      rules.sendRequestVote(model, server, peer);
-      rules.sendAppendEntries(model, server, peer);
-    });
-  });
-  let deliver = [];
-  let keep = [];
-  model.messages.forEach(function(message) {
-    if (message.recvTime <= model.time)
-      deliver.push(message);
-    else
-      keep.push(message);
-  });
-  model.messages = keep;
-  deliver.forEach(function(message) {
-    model.servers.forEach(function(server) {
-      if (server.id == message.to) {
-        handleMessage(model, server, message);
-      }
-    });
-  });
+  raft.update(model);
 
   let last = modelHistory[modelHistory.length - 1];
   let serversSame = util.equals(last.servers, model.servers);
@@ -771,7 +418,7 @@ $(window).keyup(function(e) {
     let leader = getLeader();
     if (leader !== null) {
       playback.endTimeTravel();
-      stepDown(model, leader, leader.term);
+      raft.stepDown(model, leader, leader.term);
       update();
     }
   }
@@ -801,19 +448,6 @@ $("#speed").slider({
   },
   reversed: true,
 });
-
-util.greatestLower = function(a, gt) {
-  let bs = function(low, high) {
-    if (high < low)
-      return low - 1;
-    let mid = Math.floor((low + high) / 2);
-    if (gt(a[mid]))
-      return bs(low, mid - 1);
-    else
-      return bs(mid + 1, high);
-  };
-  return bs(0, a.length - 1);
-};
 
 timeSlider = $('#time');
 timeSlider.slider({
