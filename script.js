@@ -681,7 +681,7 @@ var update = function() {
 setInterval(function() {
   if (pause)
     return;
-  model.time += 100;
+  model.time += 10 * 1000 / sliderTransform($('#speed').slider('getValue'));
   update();
 }, 10);
 
@@ -721,7 +721,25 @@ getLeader = function() {
   return leader;
 };
 
+var sliderTransform = function(v) {
+  v = Math.pow(v, 3) + 100;
+  if (v < 1)
+    return 1;
+  else if (v > 1000)
+    return 1000;
+  else
+    return v;
+}
+
+$("#speed").slider({
+  tooltip: 'always',
+  formater: function(value) {
+    return sliderTransform(value).toFixed(1) + ':1';
+  },
+});
+
 history = [util.clone(model)];
 model.servers[0].electionAlarm = 10;
 history.push(util.clone(model));
 });
+

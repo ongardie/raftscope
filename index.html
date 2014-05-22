@@ -5,18 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Raft Scope</title>
     <link href="bootstrap-3.1.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="bootstrap-slider/css/bootstrap-slider.css" rel="stylesheet">
     <script src="jquery.min.js"></script>
     <script src="bootstrap-3.1.1/js/bootstrap.min.js"></script>
+    <script src="bootstrap-slider/js/bootstrap-slider.js"></script>
     <script src="script.js"></script>
-    <link rel="stylesheet" type="text/css" href="style.css" />
+    <link href="style.css" rel="stylesheet">
   </head>
   <body>
-    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="border: 1px solid black">
-      <circle id="ring" />
-      <g id="messages"></g>
-      <g id="servers"></g>
-      <g id="logsGroup"></g>
-    </svg>
+    <div class="container">
+      <div class="row">
+        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="border: 1px solid black" width="700" height="600">
+          <circle id="ring" />
+          <g id="messages"></g>
+          <g id="servers"></g>
+          <g id="logsGroup"></g>
+        </svg>
+      </div>
+      <div class="row" style="margin-top: 20px">
+        <span class="glyphicon glyphicon-dashboard" style="font-size: 24pt; vertical-align: middle"></span>
+        &nbsp;
+        <input id="speed" data-slider-id='ex1Slider' type="text" data-slider-min="-4.7" data-slider-max="9.7" data-slider-step=".01" data-slider-value="0" />
+      </div>
+    </div>
+
     <div id="modal-details" class="modal fade" tabindex="-1" data-keyboard="true">
       <div class="modal-dialog">
         <div class="modal-content">
@@ -29,5 +41,6 @@
         </div><!-- /.modal-content -->
       </div><!-- /.modal-dialog -->
     </div><!-- /.modal -->
+
   </body>
 </html>
