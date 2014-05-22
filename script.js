@@ -27,7 +27,7 @@ playback = function() {
     $('#time-icon')
       .removeClass('glyphicon-time')
       .addClass('glyphicon-pause');
-  }
+  };
   let resume = function() {
     if (paused) {
       paused = false;
