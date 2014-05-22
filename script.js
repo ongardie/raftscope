@@ -1,3 +1,5 @@
+'use strict';
+
 var svg;
 var model;
 var NUM_SERVERS = 5;
@@ -712,7 +714,7 @@ var update = function() {
   var messagesSame = util.equals(last.messages, model.messages);
   if (playback.isTimeTraveling()) {
     serversSame = false;
-    messageSame = false;
+    messagesSame = false;
   } else {
     if (!serversSame || !messagesSame)
       history.push(util.clone(model));
