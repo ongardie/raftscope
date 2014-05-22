@@ -5,22 +5,22 @@
 /* jshint jquery: true */
 'use strict';
 
-let svg;
-let model;
-let NUM_SERVERS = 5;
-let RPC_TIMEOUT = 50000;
-let RPC_LATENCY = 10000;
-let ELECTION_TIMEOUT = 100000;
-let ARC_WIDTH = 5;
-let BATCH_SIZE = 1;
-let rules = {};
-let playback;
-let getLeader;
-let modelHistory;
-let update;
-let render = {};
+var svg;
+var model;
+var NUM_SERVERS = 5;
+var RPC_TIMEOUT = 50000;
+var RPC_LATENCY = 10000;
+var ELECTION_TIMEOUT = 100000;
+var ARC_WIDTH = 5;
+var BATCH_SIZE = 1;
+var rules = {};
+var playback;
+var getLeader;
+var modelHistory;
+var update;
+var render = {};
 
-let util = {};
+var util = {};
 
 $(function() {
 
