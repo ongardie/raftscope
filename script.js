@@ -108,7 +108,7 @@ let logsSpec = {
   x: 400,
   y: 50,
   width: 250,
-  height: 300,
+  height: 250,
 };
 
 
@@ -271,6 +271,17 @@ render.logs = function() {
       $('<rect />')
         .attr(logSpec)
         .attr('class', 'log'));
+    for (let i = 0; i < 8; ++i) {
+      logsGroup.append(
+        $('<rect />')
+          .attr({
+            x: logSpec.x + i * 25,
+            y: logSpec.y,
+            width: 25,
+            height: logSpec.height,
+          })
+          .attr('class', 'log'));
+    }
     server.log.forEach(function(entry, i) {
       let index = i + 1;
         logsGroup.append(render.entry({
