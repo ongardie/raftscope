@@ -160,8 +160,8 @@ let messageSpec = function(from, to, frac) {
   };
 };
 
+let comma = ',';
 let arcSpec = function(spec, fraction) {
-  let comma = ',';
   let radius = spec.r + ARC_WIDTH/2;
   let end = util.circleCoord(fraction, spec.cx, spec.cy, radius);
   let s = ['M', spec.cx, comma, spec.cy - radius];
@@ -195,7 +195,7 @@ render.servers = function(serversSame) {
       $('circle.background', serverNode)
         .attr('style', 'fill: ' +
               (server.state == 'stopped'
-                ? gray
+                ? 'gray'
                 : termColors[server.term % termColors.length]));
       let votesGroup = $('.votes', serverNode);
       votesGroup.empty();
@@ -301,26 +301,15 @@ render.logs = function() {
 
 render.messages = function(messagesSame) {
   let messagesGroup = $('#messages', svg);
-  if (messagesSame) {
-    model.messages.forEach(function(message, i) {
-      let s = messageSpec(message.from, message.to,
-                          (model.time - message.sendTime) /
-                          (message.recvTime - message.sendTime));
-      $('#message-' + i + ' circle', messagesGroup)
-        .attr(s);
-    });
-  } else {
+  if (!messagesSame) {
     messagesGroup.empty();
     model.messages.forEach(function(message, i) {
-      let s = messageSpec(message.from, message.to,
-                          (model.time - message.sendTime) /
-                          (message.recvTime - message.sendTime));
       messagesGroup.append(
         $('<a xlink:href="#"></a>')
           .attr('id', 'message-' + i)
-          .append($('<circle />')
-            .attr('class', 'message ' + message.direction + ' ' + message.type)
-            .attr(s)));
+          .attr('class', 'message ' + message.direction + ' ' + message.type)
+          .append($('<circle />'))
+          .append($('<path />')));
     });
     util.reparseSVG(messagesGroup);
     model.messages.forEach(function(message, i) {
@@ -331,6 +320,25 @@ render.messages = function(messagesSame) {
         });
     });
   }
+  model.messages.forEach(function(message, i) {
+    let s = messageSpec(message.from, message.to,
+                        (model.time - message.sendTime) /
+                        (message.recvTime - message.sendTime));
+    $('#message-' + i + ' circle', messagesGroup)
+      .attr(s);
+    if (message.direction == 'reply') {
+      let dlist = [];
+      dlist.push('M', s.cx - s.r, comma, s.cy,
+                 'L', s.cx + s.r, comma, s.cy);
+      if ((message.type == 'RequestVote' && message.granted) ||
+          (message.type == 'AppendEntries' && message.success)) {
+         dlist.push('M', s.cx, comma, s.cy - s.r,
+                    'L', s.cx, comma, s.cy + s.r);
+      }
+      $('#message-' + i + ' path', messagesGroup)
+        .attr('d', dlist.join(' '));
+    }
+  });
 };
 
 let relTime = function(time, now) {

@@ -39,6 +39,10 @@ svg .server .votes .no {
   stroke: black;
 }
 
+svg .message {
+  stroke-width: 3;
+}
+
 svg .message.RequestVote {
   fill:   #66c2a5;
   stroke: #66c2a5;
@@ -49,14 +53,10 @@ svg .message.AppendEntries {
   stroke: #fc8d62;
 }
 
-svg .message {
-  stroke-width: 3;
+svg .message.request circle {
 }
 
-svg .message.request {
-}
-
-svg .message.reply {
+svg .message.reply circle {
   /* fill with no opacity so it's clickable */
   fill-opacity: 0;
 }
