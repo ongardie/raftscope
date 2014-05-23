@@ -288,4 +288,10 @@ raft.drop = function(model, message) {
   message.recvTime = Infinity;
 };
 
+raft.timeout = function(model, server) {
+  server.state = 'follower';
+  server.electionAlarm = 0;
+  rules.startNewElection(model, server);
+};
+
 })();

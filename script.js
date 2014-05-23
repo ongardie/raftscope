@@ -408,6 +408,12 @@ serverModal = function(model, server) {
         raft.resume(model, server);
         render.update();
         m.modal('hide');
+      }))
+    .append(button('time out')
+      .click(function(){
+        raft.timeout(model, server);
+        render.update();
+        m.modal('hide');
       }));
   m.modal();
 };
