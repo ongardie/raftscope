@@ -524,6 +524,12 @@ timeSlider.on('slide', function() {
   render.update();
 });
 
+$('#time-button')
+  .click(function() {
+    playback.toggle();
+    return false;
+  });
+
 modelHistory = [util.clone(model)];
 model.servers[0].electionAlarm = 10;
 modelHistory.push(util.clone(model));

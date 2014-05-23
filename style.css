@@ -87,3 +87,7 @@ svg .nextIndex {
   background-image: linear-gradient(to bottom, #efefef 0%, #c3c3c3 100%);
 }
 
+a#time-button  {
+  color: inherit;
+}
+
