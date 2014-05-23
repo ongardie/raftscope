@@ -133,13 +133,6 @@ model.servers.forEach(function (server) {
                    .attr({x: s.cx, y: s.cy}))
         ));
   util.reparseSVG($('#servers'));
-  model.servers.forEach(function(server) {
-    $('#server-' + server.id + ' a', svg)
-      .click(function() {
-        serverModal(model, server);
-        return false;
-      });
-  });
 });
 
 let messageSpec = function(from, to, frac) {
@@ -179,17 +172,25 @@ render.clock = function() {
   timeSlider.slider('setValue', model.time, false);
 };
 
-render.servers = function() {
+render.servers = function(serversSame) {
   model.servers.forEach(function(server) {
     let serverNode = $('#server-' + server.id, svg);
-    $('circle', serverNode)
-      .attr('class', server.state);
     $('path', serverNode)
       .attr('d', arcSpec(serverSpec(server.id),
          util.clamp((server.electionAlarm - model.time) /
                     (ELECTION_TIMEOUT * 2),
                     0, 1)));
-    $('text', serverNode).text(server.term);
+    if (!serversSame) {
+      $('circle', serverNode)
+        .attr('class', server.state);
+      $('text', serverNode).text(server.term);
+      serverNode
+        .unbind('click')
+        .click(function() {
+          serverModal(model, server);
+          return false;
+        });
+    }
   });
 };
 
@@ -421,7 +422,7 @@ render.update = function() {
       modelHistory.push(util.clone(model));
   }
   render.clock();
-  render.servers();
+  render.servers(serversSame);
   render.messages(messagesSame);
   if (!serversSame)
     render.logs();
