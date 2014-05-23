@@ -10,6 +10,10 @@ svg .server path {
   stroke: black;
 }
 
+svg .server.follower path {
+  stroke: #555555;
+}
+
 svg .server text {
   text-anchor: middle;
   alignment-baseline: central;
@@ -18,6 +22,21 @@ svg .server text {
 
 svg .server a:hover {
   text-decoration: none;
+}
+
+svg .server .votes .have {
+  fill: black;
+  stroke: black;
+}
+
+svg .server .votes .coming {
+  fill: gray;
+  stroke: black;
+}
+
+svg .server .votes .no {
+  fill: none;
+  stroke: black;
 }
 
 svg .message.RequestVote {

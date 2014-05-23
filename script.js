@@ -134,8 +134,9 @@ model.servers.forEach(function (server) {
       .attr('id', 'server-' + server.id)
       .attr('class', 'server')
       .append($('<a xlink:href="#"></a>')
-        .append($('<circle />')
+        .append($('<circle class="background" />')
                    .attr(s))
+        .append($('<g class="votes"></g>'))
         .append($('<path />')
                    .attr('style', 'stroke-width: ' + ARC_WIDTH))
         .append($('<text />')
@@ -184,17 +185,48 @@ render.clock = function() {
 render.servers = function(serversSame) {
   model.servers.forEach(function(server) {
     let serverNode = $('#server-' + server.id, svg);
+    serverNode.attr('class', 'server ' + server.state);
     $('path', serverNode)
       .attr('d', arcSpec(serverSpec(server.id),
          util.clamp((server.electionAlarm - model.time) /
                     (ELECTION_TIMEOUT * 2),
                     0, 1)));
     if (!serversSame) {
-      $('circle', serverNode)
+      $('circle.background', serverNode)
         .attr('style', 'fill: ' +
               (server.state == 'stopped'
                 ? gray
                 : termColors[server.term % termColors.length]));
+      let votesGroup = $('.votes', serverNode);
+      votesGroup.empty();
+      if (server.state == 'candidate') {
+        model.servers.forEach(function (peer) {
+          let coord = util.circleCoord((peer.id - 1) / NUM_SERVERS,
+                                       serverSpec(server.id).cx,
+                                       serverSpec(server.id).cy,
+                                       serverSpec(server.id).r * 5/8);
+          let state;
+          if (peer == server || server.voteGranted[peer.id]) {
+            state = 'have';
+          } else if (peer.votedFor == server.id && peer.term == server.term) {
+            state = 'coming';
+          } else {
+            state = 'no';
+          }
+          let granted = (peer == server
+                           ? true
+                           : server.voteGranted[peer.id]);
+          votesGroup.append(
+            $('<circle />')
+              .attr({
+                cx: coord.x,
+                cy: coord.y,
+                r: 5,
+              })
+              .attr('class', state));
+        });
+        util.reparseSVG(votesGroup);
+      }
       $('text', serverNode).text(server.term);
       serverNode
         .unbind('click')
