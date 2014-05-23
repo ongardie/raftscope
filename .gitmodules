@@ -1,3 +1,6 @@
 [submodule "bootstrap-slider"]
 	path = bootstrap-slider
 	url = https://github.com/seiyria/bootstrap-slider
+[submodule "bootstrap-contextmenu"]
+	path = bootstrap-contextmenu
+	url = https://github.com/sydcanem/bootstrap-contextmenu

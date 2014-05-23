@@ -182,6 +182,17 @@ render.clock = function() {
   timeSlider.slider('setValue', model.time, false);
 };
 
+let serverActions = [
+  ['stop', raft.stop],
+  ['resume', raft.resume],
+  ['restart', raft.restart],
+  ['time out', raft.timeout],
+];
+
+let messageActions = [
+  ['drop', raft.drop],
+];
+
 render.servers = function(serversSame) {
   model.servers.forEach(function(server) {
     let serverNode = $('#server-' + server.id, svg);
@@ -234,6 +245,26 @@ render.servers = function(serversSame) {
           serverModal(model, server);
           return false;
         });
+      serverNode.contextmenu({
+        target: '#context-menu',
+        before: function(e) {
+          let closemenu = this.closemenu;
+          let list = $('ul', this.getMenu());
+          list.empty();
+          serverActions.forEach(function(action) {
+            list.append($('<li></li>')
+              .append($('<a href="#"></a>')
+                .text(action[0])
+                .click(function() {
+                  action[1](model, server);
+                  render.update();
+                  closemenu();
+                  return false;
+                })));
+          });
+          return true;
+        },
+      });
     }
   });
 };
@@ -322,11 +353,32 @@ render.messages = function(messagesSame) {
     });
     util.reparseSVG(messagesGroup);
     model.messages.forEach(function(message, i) {
-      $('a#message-' + i, svg)
+      let messageNode = $('a#message-' + i, svg);
+      messageNode
         .click(function() {
           messageModal(model, message);
           return false;
         });
+      messageNode.contextmenu({
+        target: '#context-menu',
+        before: function(e) {
+          let closemenu = this.closemenu;
+          let list = $('ul', this.getMenu());
+          list.empty();
+          messageActions.forEach(function(action) {
+            list.append($('<li></li>')
+              .append($('<a href="#"></a>')
+                .text(action[0])
+                .click(function() {
+                  action[1](model, message);
+                  render.update();
+                  closemenu();
+                  return false;
+                })));
+          });
+          return true;
+        },
+      });
     });
   }
   model.messages.forEach(function(message, i) {
@@ -399,33 +451,16 @@ serverModal = function(model, server) {
       .append($('<dt>peers</dt>'))
       .append($('<dd></dd>').append(peerTable))
     );
-  $('.modal-footer', m)
-    .empty()
-    .append(button('stop')
+  let footer = $('.modal-footer', m);
+  footer.empty();
+  serverActions.forEach(function(action) {
+    footer.append(button(action[0])
       .click(function(){
-        raft.stop(model, server);
-        render.update();
-        m.modal('hide');
-      }))
-    .append(button('resume')
-      .click(function(){
-        raft.resume(model, server);
-        render.update();
-        m.modal('hide');
-      }))
-    .append(button('restart')
-      .click(function(){
-        raft.stop(model, server);
-        raft.resume(model, server);
-        render.update();
-        m.modal('hide');
-      }))
-    .append(button('time out')
-      .click(function(){
-        raft.timeout(model, server);
+        action[1](model, server);
         render.update();
         m.modal('hide');
       }));
+  });
   m.modal();
 };
 
@@ -465,14 +500,16 @@ messageModal = function(model, message) {
   $('.modal-body', m)
     .empty()
     .append(fields);
-  $('.modal-footer', m)
-    .empty()
-    .append(button('drop')
+  let footer = $('.modal-footer', m);
+  footer.empty();
+  messageActions.forEach(function(action) {
+    footer.append(button(action[0])
       .click(function(){
-        raft.drop(model, message);
+        action[1](model, message);
         render.update();
         m.modal('hide');
       }));
+  });
   m.modal();
 };
 

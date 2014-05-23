@@ -284,6 +284,11 @@ raft.resume = function(model, server) {
   server.electionAlarm = makeElectionAlarm(model.time);
 };
 
+raft.restart = function(model, server) {
+  raft.stop(model, server);
+  raft.resume(model, server);
+};
+
 raft.drop = function(model, message) {
   message.recvTime = Infinity;
 };
