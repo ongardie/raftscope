@@ -61,6 +61,12 @@ svg .message.reply circle {
   fill-opacity: 0;
 }
 
+svg #logsGroup text {
+  text-anchor: middle;
+  alignment-baseline: central;
+  text-align: center;
+}
+
 svg .log {
   fill: none;
   stroke: gray;

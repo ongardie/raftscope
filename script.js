@@ -107,7 +107,7 @@ let ringSpec = {
 let logsSpec = {
   x: 410,
   y: 50,
-  width: 250,
+  width: 275,
   height: 250,
 };
 
@@ -296,43 +296,46 @@ render.logs = function() {
   let height = logsSpec.height / NUM_SERVERS;
   let leader = getLeader();
   model.servers.forEach(function(server) {
+    let LABEL_WIDTH = 20;
     let logSpec = {
-      x: logsSpec.x + logsSpec.width * 0.05,
+      x: logsSpec.x + LABEL_WIDTH + logsSpec.width * 0.05,
       y: logsSpec.y + height * server.id - 5*height/6,
       width: logsSpec.width * 0.9,
       height: 2*height/3,
     };
+    let logEntrySpec = function(index) {
+      return {
+        x: logSpec.x + (index - 1) * logSpec.width / 11,
+        y: logSpec.y,
+        width: logSpec.width / 11,
+        height: logSpec.height,
+      };
+    };
     logsGroup.append(
-      $('<rect />')
-        .attr(logSpec)
-        .attr('class', 'log'));
-    for (let i = 0; i < 8; ++i) {
+        $('<text />')
+          .text('S' + server.id)
+          .attr({x: logSpec.x - LABEL_WIDTH*4/5,
+                 y: logSpec.y + logSpec.height / 2}));
+    for (let index = 1; index <= 10; ++index) {
       logsGroup.append(
         $('<rect />')
-          .attr({
-            x: logSpec.x + i * 25,
-            y: logSpec.y,
-            width: 25,
-            height: logSpec.height,
-          })
+          .attr(logEntrySpec(index))
           .attr('class', 'log'));
     }
     server.log.forEach(function(entry, i) {
       let index = i + 1;
-        logsGroup.append(render.entry({
-          x: logSpec.x + i * 25,
-          y: logSpec.y,
-          width: 25,
-          height: logSpec.height,
-        }, entry, index <= server.commitIndex));
+        logsGroup.append(render.entry(
+             logEntrySpec(index),
+             entry,
+             index <= server.commitIndex));
     });
     if (leader !== null && leader != server) {
       logsGroup.append(
         $('<circle />')
-          .attr({cx: logSpec.x + leader.matchIndex[server.id] * 25,
+          .attr({cx: logEntrySpec(leader.matchIndex[server.id] + 1).x,
                  cy: logSpec.y + logSpec.height,
                  r: 5}));
-      var x = logSpec.x + (leader.nextIndex[server.id] - 0.5) * 25;
+      var x = logEntrySpec(leader.nextIndex[server.id] + 0.5).x;
       logsGroup.append($('<path />')
         .attr('style', 'marker-end:url(#TriangleOutM); stroke: black')
         .attr('d', ['M', x, comma, logSpec.y + logSpec.height + logSpec.height/3,
