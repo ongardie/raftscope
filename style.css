@@ -1,28 +1,8 @@
-svg #ring {
-  opacity: 0.2;
-}
-
-svg #logs {
-  opacity: 0.2;
+svg #ring, svg #logs {
+  fill: #eeeeee;
 }
 
 svg .server {
-}
-
-svg .follower {
-  fill: red;
-}
-
-svg .candidate {
-  fill: yellow;
-}
-
-svg .leader {
-  fill: green;
-}
-
-svg .stopped {
-  fill: gray;
 }
 
 svg .server path {
@@ -40,16 +20,26 @@ svg .server a:hover {
   text-decoration: none;
 }
 
+svg .message.RequestVote {
+  fill:   #66c2a5;
+  stroke: #66c2a5;
+}
+
+svg .message.AppendEntries {
+  fill:   #fc8d62;
+  stroke: #fc8d62;
+}
+
+svg .message {
+  stroke-width: 3;
+}
+
 svg .message.request {
-  fill: blue;
-  stroke: blue;
 }
 
 svg .message.reply {
   /* fill with no opacity so it's clickable */
-  fill: blue;
   fill-opacity: 0;
-  stroke: blue;
 }
 
 svg .log {
@@ -60,7 +50,13 @@ svg .log {
 svg .entry rect {
   fill: none;
   stroke: black;
-  stroke-width: 2;
+  stroke-width: 3;
+}
+
+svg .entry.uncommitted rect {
+}
+
+svg .entry.committed rect {
 }
 
 svg .entry text {
@@ -82,3 +78,12 @@ svg .nextIndex {
     margin-left: 120px;
   }
 }
+
+/* darker slider backgrounds (higher contrast) */
+.slider-track {
+  background-image: linear-gradient(to bottom, #c3c3c3 0%, #efefef 100%);
+}
+.slider-selection {
+  background-image: linear-gradient(to bottom, #efefef 0%, #c3c3c3 100%);
+}
+

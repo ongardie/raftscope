@@ -19,6 +19,15 @@ var render = {};
 
 $(function() {
 
+let termColors = [
+  '#66c2a5',
+  '#fc8d62',
+  '#8da0cb',
+  '#e78ac3',
+  '#a6d854',
+  '#ffd92f',
+];
+
 playback = function() {
   let timeTravel = false;
   let paused = false;
@@ -146,7 +155,7 @@ let messageSpec = function(from, to, frac) {
   return {
     cx: fromSpec.cx + (toSpec.cx - fromSpec.cx) * frac,
     cy: fromSpec.cy + (toSpec.cy - fromSpec.cy) * frac,
-    r: 5,
+    r: 8,
   };
 };
 
@@ -182,7 +191,10 @@ render.servers = function(serversSame) {
                     0, 1)));
     if (!serversSame) {
       $('circle', serverNode)
-        .attr('class', server.state);
+        .attr('style', 'fill: ' +
+              (server.state == 'stopped'
+                ? gray
+                : termColors[server.term % termColors.length]));
       $('text', serverNode).text(server.term);
       serverNode
         .unbind('click')
@@ -196,10 +208,11 @@ render.servers = function(serversSame) {
 
 render.entry = function(spec, entry, committed) {
   return $('<g></g>')
-    .attr('class', 'entry')
+    .attr('class', 'entry ' + (committed ? 'committed' : 'uncommitted'))
     .append($('<rect />')
       .attr(spec)
-      .attr('stroke-dasharray', committed ? '1 0' : '5 5'))
+      .attr('stroke-dasharray', committed ? '1 0' : '5 5')
+      .attr('style', 'fill: ' + termColors[entry.term % termColors.length]))
     .append($('<text />')
       .attr({x: spec.x + spec.width / 2,
              y: spec.y + spec.height / 2})
@@ -240,7 +253,7 @@ render.logs = function() {
         $('<circle />')
           .attr({cx: logSpec.x + leader.matchIndex[server.id] * 25,
                  cy: logSpec.y + logSpec.height,
-                 r: 3}));
+                 r: 5}));
       logsGroup.append($('<rect />')
         .attr('class', 'nextIndex')
         .attr({
@@ -274,7 +287,7 @@ render.messages = function(messagesSame) {
         $('<a xlink:href="#"></a>')
           .attr('id', 'message-' + i)
           .append($('<circle />')
-            .attr('class', 'message ' + message.direction)
+            .attr('class', 'message ' + message.direction + ' ' + message.type)
             .attr(s)));
     });
     util.reparseSVG(messagesGroup);
