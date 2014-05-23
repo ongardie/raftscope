@@ -100,12 +100,12 @@ svg = $('svg');
 
 let ringSpec = {
   cx: 200,
-  cy: 200,
+  cy: 210,
   r: 150,
 };
 
 let logsSpec = {
-  x: 400,
+  x: 410,
   y: 50,
   width: 250,
   height: 250,
@@ -133,13 +133,17 @@ model.servers.forEach(function (server) {
     $('<g></g>')
       .attr('id', 'server-' + server.id)
       .attr('class', 'server')
+      .append($('<text class="serverid" />')
+                 .text('S' + server.id)
+                 .attr(util.circleCoord((server.id - 1) / NUM_SERVERS,
+                                        ringSpec.cx, ringSpec.cy, ringSpec.r + 45)))
       .append($('<a xlink:href="#"></a>')
         .append($('<circle class="background" />')
                    .attr(s))
         .append($('<g class="votes"></g>'))
         .append($('<path />')
                    .attr('style', 'stroke-width: ' + ARC_WIDTH))
-        .append($('<text />')
+        .append($('<text class="term" />')
                    .attr({x: s.cx, y: s.cy}))
         ));
   util.reparseSVG($('#servers'));
@@ -238,7 +242,7 @@ render.servers = function(serversSame) {
         });
         util.reparseSVG(votesGroup);
       }
-      $('text', serverNode).text(server.term);
+      $('text.term', serverNode).text(server.term);
       serverNode
         .unbind('click')
         .click(function() {
