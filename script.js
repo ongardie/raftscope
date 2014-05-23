@@ -286,14 +286,12 @@ render.logs = function() {
           .attr({cx: logSpec.x + leader.matchIndex[server.id] * 25,
                  cy: logSpec.y + logSpec.height,
                  r: 5}));
-      logsGroup.append($('<rect />')
-        .attr('class', 'nextIndex')
-        .attr({
-          x: logSpec.x + (leader.nextIndex[server.id] - 1) * 25,
-          y: logSpec.y,
-          width: 25,
-          height: logSpec.height,
-        }));
+      var x = logSpec.x + (leader.nextIndex[server.id] - 0.5) * 25;
+      logsGroup.append($('<path />')
+        .attr('style', 'marker-end:url(#TriangleOutM); stroke: black')
+        .attr('d', ['M', x, comma, logSpec.y + logSpec.height + logSpec.height/3,
+                    'L', x, comma, logSpec.y + logSpec.height + logSpec.height/6].join(' '))
+        .attr('stroke-width', 3));
     }
   });
   util.reparseSVG(logsGroup);
