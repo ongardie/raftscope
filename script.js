@@ -146,8 +146,8 @@ model.servers.forEach(function (server) {
         .append($('<text class="term" />')
                    .attr({x: s.cx, y: s.cy}))
         ));
-  util.reparseSVG($('#servers'));
 });
+util.reparseSVG($('#servers'));
 
 let messageSpec = function(from, to, frac) {
   let fromSpec = serverSpec(from);
@@ -206,6 +206,7 @@ render.servers = function(serversSame) {
          util.clamp((server.electionAlarm - model.time) /
                     (ELECTION_TIMEOUT * 2),
                     0, 1)));
+    $('text.term', serverNode).text(server.term);
     if (!serversSame) {
       $('circle.background', serverNode)
         .attr('style', 'fill: ' +
@@ -242,7 +243,6 @@ render.servers = function(serversSame) {
         });
         util.reparseSVG(votesGroup);
       }
-      $('text.term', serverNode).text(server.term);
       serverNode
         .unbind('click')
         .click(function() {

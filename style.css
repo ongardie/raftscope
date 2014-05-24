@@ -20,7 +20,14 @@ svg .server text {
   text-align: center;
 }
 
-svg .server a:hover {
+
+svg .server a,
+svg .server a:active,
+svg .server a:hover,
+svg .server a:focus,
+svg .server a:visited
+{
+  font-size: inherit;
   text-decoration: none;
 }
 
