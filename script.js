@@ -191,6 +191,7 @@ let serverActions = [
   ['resume', raft.resume],
   ['restart', raft.restart],
   ['time out', raft.timeout],
+  ['request', raft.clientRequest],
 ];
 
 let messageActions = [
@@ -569,8 +570,7 @@ $(window).keyup(function(e) {
     let leader = getLeader();
     if (leader !== null) {
       playback.endTimeTravel();
-      leader.log.push({term: leader.term,
-                       value: 'keypress'});
+      raft.clientRequest(model, leader);
       render.update();
     }
   } else if (e.keyCode == 'R'.charCodeAt(0)) {

@@ -299,4 +299,11 @@ raft.timeout = function(model, server) {
   rules.startNewElection(model, server);
 };
 
+raft.clientRequest = function(model, server) {
+  if (server.state == 'leader') {
+    server.log.push({term: server.term,
+                     value: 'v'});
+  }
+};
+
 })();
