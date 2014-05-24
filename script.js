@@ -385,7 +385,7 @@ render.messages = function(messagesSame) {
                   action[1](model, message);
                   render.update();
                   closemenu();
-                  return false;
+                  return true;
                 })));
           });
           return true;
