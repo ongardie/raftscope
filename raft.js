@@ -107,7 +107,7 @@ rules.sendRequestVote = function(model, server, peer) {
 rules.becomeLeader = function(model, server) {
   if (server.state == 'candidate' &&
       util.countTrue(util.mapValues(server.voteGranted)) + 1 > Math.floor(NUM_SERVERS / 2)) {
-    console.log('server ' + server.id + ' is leader in term ' + server.term);
+    //console.log('server ' + server.id + ' is leader in term ' + server.term);
     server.state = 'leader';
     server.nextIndex    = util.makeMap(server.peers, server.log.length + 1);
     server.rpcDue       = util.makeMap(server.peers, Infinity);
