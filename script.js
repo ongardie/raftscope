@@ -110,7 +110,7 @@ let logsSpec = {
   x: 410,
   y: 50,
   width: 275,
-  height: 250,
+  height: 270,
 };
 
 
@@ -313,19 +313,38 @@ render.entry = function(spec, entry, committed) {
 };
 
 render.logs = function() {
+  let LABEL_WIDTH = 20;
+  let INDEX_HEIGHT = 25;
   let logsGroup = $('#logsGroup', svg);
   logsGroup.empty();
   logsGroup.append(
     $('<rect />')
       .attr('id', 'logs')
       .attr(logsSpec));
-  let height = logsSpec.height / NUM_SERVERS;
+  let height = (logsSpec.height - INDEX_HEIGHT) / NUM_SERVERS;
   let leader = getLeader();
+  let indexSpec = {
+    x: logsSpec.x + LABEL_WIDTH + logsSpec.width * 0.05,
+    y: logsSpec.y + 2*height/6,
+    width: logsSpec.width * 0.9,
+    height: 2*height/3,
+  };
+  for (let index = 1; index <= 10; ++index) {
+    let indexEntrySpec = {
+      x: indexSpec.x + (index - 0.5) * indexSpec.width / 11,
+      y: indexSpec.y,
+      width: indexSpec.width / 11,
+      height: indexSpec.height,
+    };
+    logsGroup
+        .append($('<text />')
+          .attr(indexEntrySpec)
+          .text(index));
+  }
   model.servers.forEach(function(server) {
-    let LABEL_WIDTH = 20;
     let logSpec = {
       x: logsSpec.x + LABEL_WIDTH + logsSpec.width * 0.05,
-      y: logsSpec.y + height * server.id - 5*height/6,
+      y: logsSpec.y + INDEX_HEIGHT + height * server.id - 5*height/6,
       width: logsSpec.width * 0.9,
       height: 2*height/3,
     };
@@ -343,10 +362,10 @@ render.logs = function() {
           .attr({x: logSpec.x - LABEL_WIDTH*4/5,
                  y: logSpec.y + logSpec.height / 2}));
     for (let index = 1; index <= 10; ++index) {
-      logsGroup.append(
-        $('<rect />')
+      logsGroup
+        .append($('<rect />')
           .attr(logEntrySpec(index))
-          .attr('class', 'log'));
+          .attr('class', 'log'))
     }
     server.log.forEach(function(entry, i) {
       let index = i + 1;
