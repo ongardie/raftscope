@@ -482,6 +482,7 @@ let button = function(label) {
 serverModal = function(model, server) {
   let m = $('#modal-details');
   $('.modal-title', m).text('Server ' + server.id);
+  $('.modal-dialog', m).removeClass('modal-sm').addClass('modal-lg');
   let li = function(label, value) {
     return '<dt>' + label + '</dt><dd>' + value + '</dd>';
   };
@@ -531,6 +532,7 @@ serverModal = function(model, server) {
 
 messageModal = function(model, message) {
   let m = $('#modal-details');
+  $('.modal-dialog', m).removeClass('modal-lg').addClass('modal-sm');
   $('.modal-title', m).text(message.type + ' ' + message.direction);
   let li = function(label, value) {
     return '<dt>' + label + '</dt><dd>' + value + '</dd>';
