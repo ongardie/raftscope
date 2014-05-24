@@ -36,6 +36,7 @@ playback = function() {
     $('#time-icon')
       .removeClass('glyphicon-time')
       .addClass('glyphicon-pause');
+    render.update();
   };
   let resume = function() {
     if (paused) {
@@ -48,6 +49,7 @@ playback = function() {
       $('#time-icon')
         .removeClass('glyphicon-pause')
         .addClass('glyphicon-time');
+      render.update();
     }
   };
   return {
@@ -149,6 +151,8 @@ model.servers.forEach(function (server) {
 });
 util.reparseSVG($('#servers'));
 
+let MESSAGE_RADIUS = 8;
+
 let messageSpec = function(from, to, frac) {
   let fromSpec = serverSpec(from);
   let toSpec = serverSpec(to);
@@ -160,8 +164,27 @@ let messageSpec = function(from, to, frac) {
   return {
     cx: fromSpec.cx + (toSpec.cx - fromSpec.cx) * frac,
     cy: fromSpec.cy + (toSpec.cy - fromSpec.cy) * frac,
-    r: 8,
+    r: MESSAGE_RADIUS,
   };
+};
+
+let messageArrowSpec = function(from, to, frac) {
+  let fromSpec = serverSpec(from);
+  let toSpec = serverSpec(to);
+  // adjust frac so you start and end at the edge of servers
+  let totalDist  = Math.sqrt(Math.pow(toSpec.cx - fromSpec.cx, 2) +
+                             Math.pow(toSpec.cy - fromSpec.cy, 2));
+  let travel = totalDist - fromSpec.r - toSpec.r;
+  let fracS = ((fromSpec.r + MESSAGE_RADIUS)/ totalDist) +
+               frac * (travel / totalDist);
+  let fracH = ((fromSpec.r + 2*MESSAGE_RADIUS)/ totalDist) +
+               frac * (travel / totalDist);
+  return [
+    'M', fromSpec.cx + (toSpec.cx - fromSpec.cx) * fracS, comma,
+         fromSpec.cy + (toSpec.cy - fromSpec.cy) * fracS,
+    'L', fromSpec.cx + (toSpec.cx - fromSpec.cx) * fracH, comma,
+         fromSpec.cy + (toSpec.cy - fromSpec.cy) * fracH,
+  ].join(' ');
 };
 
 let comma = ',';
@@ -359,7 +382,8 @@ render.messages = function(messagesSame) {
           .attr('id', 'message-' + i)
           .attr('class', 'message ' + message.direction + ' ' + message.type)
           .append($('<circle />'))
-          .append($('<path />')));
+          .append($('<path class="message-success" />'))
+          .append($('<path class="message-direction" />')));
     });
     util.reparseSVG(messagesGroup);
     model.messages.forEach(function(message, i) {
@@ -408,8 +432,18 @@ render.messages = function(messagesSame) {
          dlist.push('M', s.cx, comma, s.cy - s.r,
                     'L', s.cx, comma, s.cy + s.r);
       }
-      $('#message-' + i + ' path', messagesGroup)
+      $('#message-' + i + ' path.message-success', messagesGroup)
         .attr('d', dlist.join(' '));
+    }
+    let dir = $('#message-' + i + ' path.message-direction', messagesGroup);
+    if (playback.isPaused()) {
+      dir.attr('style', 'marker-end:url(#TriangleOutS-' + message.type + ')')
+         .attr('d',
+           messageArrowSpec(message.from, message.to,
+                            (model.time - message.sendTime) /
+                            (message.recvTime - message.sendTime)));
+    } else {
+      dir.attr('style', '').attr('d', 'M 0,0'); // clear
     }
   });
 };
