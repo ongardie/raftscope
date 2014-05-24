@@ -249,10 +249,12 @@ render.servers = function(serversSame) {
           serverModal(model, server);
           return false;
         });
+      if (serverNode.data('context'))
+        serverNode.data('context').destroy();
       serverNode.contextmenu({
         target: '#context-menu',
         before: function(e) {
-          let closemenu = this.closemenu;
+          let closemenu = this.closemenu.bind(this);
           let list = $('ul', this.getMenu());
           list.empty();
           serverActions.forEach(function(action) {
@@ -366,10 +368,12 @@ render.messages = function(messagesSame) {
           messageModal(model, message);
           return false;
         });
+      if (messageNode.data('context'))
+        messageNode.data('context').destroy();
       messageNode.contextmenu({
         target: '#context-menu',
         before: function(e) {
-          let closemenu = this.closemenu;
+          let closemenu = this.closemenu.bind(this);
           let list = $('ul', this.getMenu());
           list.empty();
           messageActions.forEach(function(action) {
