@@ -8,8 +8,9 @@
 
 var raft = {};
 var RPC_TIMEOUT = 50000;
-var RPC_LATENCY = 10000;
-var ELECTION_TIMEOUT = 100000;
+var MIN_RPC_LATENCY = 10000;
+var MAX_RPC_LATENCY = 15000;
+var ELECTION_TIMEOUT = 150000;
 var NUM_SERVERS = 5;
 var BATCH_SIZE = 1;
 
@@ -17,7 +18,9 @@ var BATCH_SIZE = 1;
 
 let sendMessage = function(model, message) {
   message.sendTime = model.time;
-  message.recvTime = model.time + (1 + (0.5 * (Math.random() - 0.5))) * RPC_LATENCY;
+  message.recvTime = model.time +
+                     MIN_RPC_LATENCY +
+                     Math.random() * (MAX_RPC_LATENCY - MIN_RPC_LATENCY);
   model.messages.push(message);
 };
 
@@ -304,6 +307,54 @@ raft.clientRequest = function(model, server) {
     server.log.push({term: server.term,
                      value: 'v'});
   }
+};
+
+raft.spreadTimers = function(model) {
+  let timers = [];
+  model.servers.forEach(function(server) {
+    if (server.electionAlarm > model.time &&
+        server.electionAlarm < Infinity) {
+      timers.push(server.electionAlarm);
+    }
+  });
+  timers.sort();
+  if (timers.length > 1 &&
+      timers[1] - timers[0] < MAX_RPC_LATENCY) {
+    if (timers[0] > model.time + MAX_RPC_LATENCY) {
+      model.servers.forEach(function(server) {
+        if (server.electionAlarm == timers[0]) {
+          server.electionAlarm -= MAX_RPC_LATENCY;
+          console.log('adjusted S' + server.id + ' timeout forward');
+        }
+      });
+    } else {
+      model.servers.forEach(function(server) {
+        if (server.electionAlarm > timers[0] &&
+            server.electionAlarm < timers[0] + MAX_RPC_LATENCY) {
+          server.electionAlarm += MAX_RPC_LATENCY;
+          console.log('adjusted S' + server.id + ' timeout backward');
+        }
+      });
+    }
+  }
+};
+
+raft.alignTimers = function(model) {
+  raft.spreadTimers(model);
+  let timers = [];
+  model.servers.forEach(function(server) {
+    if (server.electionAlarm > model.time &&
+        server.electionAlarm < Infinity) {
+      timers.push(server.electionAlarm);
+    }
+  });
+  timers.sort();
+  model.servers.forEach(function(server) {
+    if (server.electionAlarm == timers[1]) {
+      server.electionAlarm = timers[0];
+      console.log('adjusted S' + server.id + ' timeout forward');
+    }
+  });
 };
 
 })();

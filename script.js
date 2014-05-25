@@ -636,6 +636,14 @@ $(window).keyup(function(e) {
       raft.resume(model, leader);
       render.update();
     }
+  } else if (e.keyCode == 'T'.charCodeAt(0)) {
+    playback.endTimeTravel();
+    raft.spreadTimers(model);
+    render.update();
+  } else if (e.keyCode == 'A'.charCodeAt(0)) {
+    playback.endTimeTravel();
+    raft.alignTimers(model);
+    render.update();
   }
 });
 
