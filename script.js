@@ -644,6 +644,10 @@ $(window).keyup(function(e) {
     playback.endTimeTravel();
     raft.alignTimers(model);
     render.update();
+  } else if (e.keyCode == 'L'.charCodeAt(0)) {
+    playback.endTimeTravel();
+    raft.setupLogReplicationScenario(model);
+    render.update();
   }
 });
 

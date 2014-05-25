@@ -10,7 +10,7 @@ var raft = {};
 var RPC_TIMEOUT = 50000;
 var MIN_RPC_LATENCY = 10000;
 var MAX_RPC_LATENCY = 15000;
-var ELECTION_TIMEOUT = 150000;
+var ELECTION_TIMEOUT = 100000;
 var NUM_SERVERS = 5;
 var BATCH_SIZE = 1;
 
@@ -355,6 +355,28 @@ raft.alignTimers = function(model) {
       console.log('adjusted S' + server.id + ' timeout forward');
     }
   });
+};
+
+raft.setupLogReplicationScenario = function(model) {
+  let s1 = model.servers[0];
+  raft.restart(model, model.servers[1]);
+  raft.restart(model, model.servers[2]);
+  raft.restart(model, model.servers[3]);
+  raft.restart(model, model.servers[4]);
+  raft.timeout(model, model.servers[0]);
+  rules.startNewElection(model, s1);
+  model.servers[1].term = 2;
+  model.servers[2].term = 2;
+  model.servers[3].term = 2;
+  model.servers[4].term = 2;
+  model.servers[1].votedFor = 1;
+  model.servers[2].votedFor = 1;
+  model.servers[3].votedFor = 1;
+  model.servers[4].votedFor = 1;
+  s1.voteGranted = util.makeMap(s1.peers, true);
+  raft.stop(model, model.servers[2]);
+  raft.stop(model, model.servers[3]);
+  raft.stop(model, model.servers[4]);
 };
 
 })();
