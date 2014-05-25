@@ -586,7 +586,7 @@ render.update = function() {
   let last = modelHistory[modelHistory.length - 1];
   let serversSame = util.equals(last.servers, model.servers);
   let messagesSame = util.equals(last.messages, model.messages);
-  if (playback.isTimeTraveling()) {
+  if (model.time == 0 || playback.isTimeTraveling()) {
     serversSame = false;
     messagesSame = false;
   } else {
@@ -697,7 +697,6 @@ $('#time-button')
   });
 
 modelHistory = [util.clone(model)];
-model.servers[0].electionAlarm = 10;
-modelHistory.push(util.clone(model));
+render.update();
 });
 
