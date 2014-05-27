@@ -619,7 +619,8 @@ window.setInterval(function() {
 }, 10);
 
 $(window).keyup(function(e) {
-  if (e.keyCode == ' '.charCodeAt(0)) {
+  if (e.keyCode == ' '.charCodeAt(0) ||
+      e.keyCode == 190 /* dot, emitted by Logitech remote */) {
     playback.toggle();
   } else if (e.keyCode == 'C'.charCodeAt(0)) {
     let leader = getLeader();
