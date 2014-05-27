@@ -101,15 +101,15 @@ model = {
 svg = $('svg');
 
 let ringSpec = {
-  cx: 200,
+  cx: 210,
   cy: 210,
   r: 150,
 };
 
 let logsSpec = {
-  x: 410,
+  x: 430,
   y: 50,
-  width: 275,
+  width: 320,
   height: 270,
 };
 
@@ -138,7 +138,7 @@ model.servers.forEach(function (server) {
       .append($('<text class="serverid" />')
                  .text('S' + server.id)
                  .attr(util.circleCoord((server.id - 1) / NUM_SERVERS,
-                                        ringSpec.cx, ringSpec.cy, ringSpec.r + 45)))
+                                        ringSpec.cx, ringSpec.cy, ringSpec.r + 50)))
       .append($('<a xlink:href="#"></a>')
         .append($('<circle class="background" />')
                    .attr(s))
@@ -313,7 +313,7 @@ render.entry = function(spec, entry, committed) {
 };
 
 render.logs = function() {
-  let LABEL_WIDTH = 20;
+  let LABEL_WIDTH = 25;
   let INDEX_HEIGHT = 25;
   let logsGroup = $('#logsGroup', svg);
   logsGroup.empty();
@@ -359,6 +359,7 @@ render.logs = function() {
     logsGroup.append(
         $('<text />')
           .text('S' + server.id)
+          .attr('class', 'serverid ' + server.state)
           .attr({x: logSpec.x - LABEL_WIDTH*4/5,
                  y: logSpec.y + logSpec.height / 2}));
     for (let index = 1; index <= 10; ++index) {
@@ -619,6 +620,8 @@ window.setInterval(function() {
 }, 10);
 
 $(window).keyup(function(e) {
+  if (e.target.id == "title")
+    return;
   if (e.keyCode == ' '.charCodeAt(0) ||
       e.keyCode == 190 /* dot, emitted by Logitech remote */) {
     playback.toggle();

@@ -1,3 +1,30 @@
+body {
+  font-size: 16pt;
+}
+
+#modal-details {
+  font-size: 12pt;
+}
+
+.tooltip {
+  font-size: 16pt;
+}
+
+.tooltip.top {
+  padding: 9px 0;
+}
+.tooltip.top .tooltip-arrow {
+  margin-left: -10px;
+  border-width: 10px 10px 0;
+}
+
+textarea#title {
+ width: 100%;
+ max-height: 3.1ex;
+ font-weight: bold;
+ margin-top: 10px;
+}
+
 svg #ring, svg #logs {
   fill: #eeeeee;
 }
@@ -11,7 +38,7 @@ svg .server path {
 }
 
 svg .server.follower path {
-  stroke: #555555;
+  stroke: #666666;
 }
 
 svg .server text {
@@ -20,6 +47,13 @@ svg .server text {
   text-align: center;
 }
 
+svg .server.leader text.serverid {
+  fill: red;
+}
+
+svg #logsGroup text.serverid.leader {
+  fill: red;
+}
 
 svg .server a,
 svg .server a:active,
