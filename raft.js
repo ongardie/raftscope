@@ -287,6 +287,12 @@ raft.resume = function(model, server) {
   server.electionAlarm = makeElectionAlarm(model.time);
 };
 
+raft.resumeAll = function(model) {
+  model.servers.forEach(function(server) {
+    raft.resume(model, server);
+  });
+};
+
 raft.restart = function(model, server) {
   raft.stop(model, server);
   raft.resume(model, server);

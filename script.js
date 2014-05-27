@@ -653,6 +653,10 @@ $(window).keyup(function(e) {
     playback.pause();
     raft.setupLogReplicationScenario(model);
     render.update();
+  } else if (e.keyCode == 'B'.charCodeAt(0)) {
+    playback.endTimeTravel();
+    raft.resumeAll(model);
+    render.update();
   }
 });
 
