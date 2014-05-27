@@ -647,6 +647,7 @@ $(window).keyup(function(e) {
     render.update();
   } else if (e.keyCode == 'L'.charCodeAt(0)) {
     playback.endTimeTravel();
+    playback.pause();
     raft.setupLogReplicationScenario(model);
     render.update();
   }

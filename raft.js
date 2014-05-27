@@ -377,6 +377,10 @@ raft.setupLogReplicationScenario = function(model) {
   raft.stop(model, model.servers[2]);
   raft.stop(model, model.servers[3]);
   raft.stop(model, model.servers[4]);
+  rules.becomeLeader(model, s1);
+  raft.clientRequest(model, s1);
+  raft.clientRequest(model, s1);
+  raft.clientRequest(model, s1);
 };
 
 })();
