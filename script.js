@@ -232,14 +232,14 @@ var messageActions = [
 render.servers = function(serversSame) {
   model.servers.forEach(function(server) {
     var serverNode = $('#server-' + server.id, svg);
-    serverNode.attr('class', 'server ' + server.state);
     $('path', serverNode)
       .attr('d', arcSpec(serverSpec(server.id),
          util.clamp((server.electionAlarm - model.time) /
                     (ELECTION_TIMEOUT * 2),
                     0, 1)));
-    $('text.term', serverNode).text(server.term);
     if (!serversSame) {
+      $('text.term', serverNode).text(server.term);
+      serverNode.attr('class', 'server ' + server.state);
       $('circle.background', serverNode)
         .attr('style', 'fill: ' +
               (server.state == 'stopped'
