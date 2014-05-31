@@ -321,11 +321,11 @@ render.entry = function(spec, entry, committed) {
 render.logs = function() {
   var LABEL_WIDTH = 25;
   var INDEX_HEIGHT = 25;
-  var logsGroup = $('#logsGroup', svg);
+  var logsGroup = $('#logs', svg);
   logsGroup.empty();
   logsGroup.append(
     SVG('rect')
-      .attr('id', 'logs')
+      .attr('id', 'logsbg')
       .attr(logsSpec));
   var height = (logsSpec.height - INDEX_HEIGHT) / NUM_SERVERS;
   var leader = getLeader();
@@ -335,6 +335,9 @@ render.logs = function() {
     width: logsSpec.width * 0.9,
     height: 2*height/3,
   };
+  var indexes = SVG('g')
+    .attr('id', 'log-indexes');
+  logsGroup.append(indexes);
   for (var index = 1; index <= 10; ++index) {
     var indexEntrySpec = {
       x: indexSpec.x + (index - 0.5) * indexSpec.width / 11,
@@ -342,7 +345,7 @@ render.logs = function() {
       width: indexSpec.width / 11,
       height: indexSpec.height,
     };
-    logsGroup
+    indexes
         .append(SVG('text')
           .attr(indexEntrySpec)
           .text(index));
@@ -362,34 +365,36 @@ render.logs = function() {
         height: logSpec.height,
       };
     };
-    logsGroup.append(
+    var log = SVG('g')
+      .attr('id', 'log-S' + server.id);
+    logsGroup.append(log);
+    log.append(
         SVG('text')
           .text('S' + server.id)
           .attr('class', 'serverid ' + server.state)
           .attr({x: logSpec.x - LABEL_WIDTH*4/5,
                  y: logSpec.y + logSpec.height / 2}));
     for (var index = 1; index <= 10; ++index) {
-      logsGroup
-        .append(SVG('rect')
+      log.append(SVG('rect')
           .attr(logEntrySpec(index))
           .attr('class', 'log'))
     }
     server.log.forEach(function(entry, i) {
       var index = i + 1;
-        logsGroup.append(render.entry(
+        log.append(render.entry(
              logEntrySpec(index),
              entry,
              index <= server.commitIndex));
     });
     if (leader !== null && leader != server) {
-      logsGroup.append(
+      log.append(
         SVG('circle')
           .attr('title', 'match index').tooltip({container: 'body'})
           .attr({cx: logEntrySpec(leader.matchIndex[server.id] + 1).x,
                  cy: logSpec.y + logSpec.height,
                  r: 5}));
       var x = logEntrySpec(leader.nextIndex[server.id] + 0.5).x;
-      logsGroup.append(SVG('path')
+      log.append(SVG('path')
         .attr('title', 'next index').tooltip({container: 'body'})
         .attr('style', 'marker-end:url(#TriangleOutM); stroke: black')
         .attr('d', ['M', x, comma, logSpec.y + logSpec.height + logSpec.height/3,
