@@ -616,12 +616,14 @@ var sliderTransform = function(v) {
     return v;
 };
 
-window.setInterval(function() {
-  if (playback.isPaused())
-    return;
-  model.time += 10 * 1000 / sliderTransform($('#speed').slider('getValue'));
-  render.update();
-}, 10);
+var periodic = function() {
+  if (!playback.isPaused()) {
+    model.time += 10 * 1000 / sliderTransform($('#speed').slider('getValue'));
+    render.update();
+  }
+  window.setTimeout(periodic, 10);
+};
+window.setTimeout(periodic, 10);
 
 $(window).keyup(function(e) {
   if (e.target.id == "title")
