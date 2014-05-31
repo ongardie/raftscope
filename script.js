@@ -19,7 +19,7 @@ var render = {};
 
 $(function() {
 
-let termColors = [
+var termColors = [
   '#66c2a5',
   '#fc8d62',
   '#8da0cb',
@@ -28,24 +28,24 @@ let termColors = [
   '#ffd92f',
 ];
 
-let SVG = function(tag) {
+var SVG = function(tag) {
    return $(document.createElementNS('http://www.w3.org/2000/svg', tag));
 };
 
 playback = function() {
-  let timeTravel = false;
-  let paused = false;
-  let pause = function() {
+  var timeTravel = false;
+  var paused = false;
+  var pause = function() {
     paused = true;
     $('#time-icon')
       .removeClass('glyphicon-time')
       .addClass('glyphicon-pause');
     render.update();
   };
-  let resume = function() {
+  var resume = function() {
     if (paused) {
       paused = false;
-      let i = util.greatestLower(modelHistory,
+      var i = util.greatestLower(modelHistory,
                                  function(m) { return m.time > model.time; });
       while (modelHistory.length - 1 > i)
         modelHistory.pop();
@@ -92,9 +92,9 @@ model = {
 };
 
 (function() {
-  for (let i = 1; i <= NUM_SERVERS; i += 1) {
-      let peers = [];
-      for (let j = 1; j <= NUM_SERVERS; j += 1) {
+  for (var i = 1; i <= NUM_SERVERS; i += 1) {
+      var peers = [];
+      for (var j = 1; j <= NUM_SERVERS; j += 1) {
         if (i != j)
           peers.push(j);
       }
@@ -104,13 +104,13 @@ model = {
 
 svg = $('svg');
 
-let ringSpec = {
+var ringSpec = {
   cx: 210,
   cy: 210,
   r: 150,
 };
 
-let logsSpec = {
+var logsSpec = {
   x: 430,
   y: 50,
   width: 320,
@@ -118,8 +118,8 @@ let logsSpec = {
 };
 
 
-let serverSpec = function(id) {
-  let coord = util.circleCoord((id - 1) / NUM_SERVERS,
+var serverSpec = function(id) {
+  var coord = util.circleCoord((id - 1) / NUM_SERVERS,
                                ringSpec.cx, ringSpec.cy, ringSpec.r);
   return {
     cx: coord.x,
@@ -130,11 +130,11 @@ let serverSpec = function(id) {
 
 $('#ring', svg).attr(ringSpec);
 
-let serverModal;
-let messageModal;
+var serverModal;
+var messageModal;
 
 model.servers.forEach(function (server) {
-  let s = serverSpec(server.id);
+  var s = serverSpec(server.id);
   $('#servers', svg).append(
     SVG('g')
       .attr('id', 'server-' + server.id)
@@ -158,15 +158,15 @@ model.servers.forEach(function (server) {
         ));
 });
 
-let MESSAGE_RADIUS = 8;
+var MESSAGE_RADIUS = 8;
 
-let messageSpec = function(from, to, frac) {
-  let fromSpec = serverSpec(from);
-  let toSpec = serverSpec(to);
+var messageSpec = function(from, to, frac) {
+  var fromSpec = serverSpec(from);
+  var toSpec = serverSpec(to);
   // adjust frac so you start and end at the edge of servers
-  let totalDist  = Math.sqrt(Math.pow(toSpec.cx - fromSpec.cx, 2) +
+  var totalDist  = Math.sqrt(Math.pow(toSpec.cx - fromSpec.cx, 2) +
                              Math.pow(toSpec.cy - fromSpec.cy, 2));
-  let travel = totalDist - fromSpec.r - toSpec.r;
+  var travel = totalDist - fromSpec.r - toSpec.r;
   frac = (fromSpec.r / totalDist) + frac * (travel / totalDist);
   return {
     cx: fromSpec.cx + (toSpec.cx - fromSpec.cx) * frac,
@@ -175,16 +175,16 @@ let messageSpec = function(from, to, frac) {
   };
 };
 
-let messageArrowSpec = function(from, to, frac) {
-  let fromSpec = serverSpec(from);
-  let toSpec = serverSpec(to);
+var messageArrowSpec = function(from, to, frac) {
+  var fromSpec = serverSpec(from);
+  var toSpec = serverSpec(to);
   // adjust frac so you start and end at the edge of servers
-  let totalDist  = Math.sqrt(Math.pow(toSpec.cx - fromSpec.cx, 2) +
+  var totalDist  = Math.sqrt(Math.pow(toSpec.cx - fromSpec.cx, 2) +
                              Math.pow(toSpec.cy - fromSpec.cy, 2));
-  let travel = totalDist - fromSpec.r - toSpec.r;
-  let fracS = ((fromSpec.r + MESSAGE_RADIUS)/ totalDist) +
+  var travel = totalDist - fromSpec.r - toSpec.r;
+  var fracS = ((fromSpec.r + MESSAGE_RADIUS)/ totalDist) +
                frac * (travel / totalDist);
-  let fracH = ((fromSpec.r + 2*MESSAGE_RADIUS)/ totalDist) +
+  var fracH = ((fromSpec.r + 2*MESSAGE_RADIUS)/ totalDist) +
                frac * (travel / totalDist);
   return [
     'M', fromSpec.cx + (toSpec.cx - fromSpec.cx) * fracS, comma,
@@ -194,11 +194,11 @@ let messageArrowSpec = function(from, to, frac) {
   ].join(' ');
 };
 
-let comma = ',';
-let arcSpec = function(spec, fraction) {
-  let radius = spec.r + ARC_WIDTH/2;
-  let end = util.circleCoord(fraction, spec.cx, spec.cy, radius);
-  let s = ['M', spec.cx, comma, spec.cy - radius];
+var comma = ',';
+var arcSpec = function(spec, fraction) {
+  var radius = spec.r + ARC_WIDTH/2;
+  var end = util.circleCoord(fraction, spec.cx, spec.cy, radius);
+  var s = ['M', spec.cx, comma, spec.cy - radius];
   if (fraction > 0.5) {
     s.push('A', radius, comma, radius, '0 0,1', spec.cx, spec.cy + radius);
     s.push('M', spec.cx, comma, spec.cy + radius);
@@ -207,7 +207,7 @@ let arcSpec = function(spec, fraction) {
   return s.join(' ');
 };
 
-let timeSlider;
+var timeSlider;
 
 render.clock = function() {
   if (playback.isTimeTraveling())
@@ -216,7 +216,7 @@ render.clock = function() {
   timeSlider.slider('setValue', model.time, false);
 };
 
-let serverActions = [
+var serverActions = [
   ['stop', raft.stop],
   ['resume', raft.resume],
   ['restart', raft.restart],
@@ -224,13 +224,13 @@ let serverActions = [
   ['request', raft.clientRequest],
 ];
 
-let messageActions = [
+var messageActions = [
   ['drop', raft.drop],
 ];
 
 render.servers = function(serversSame) {
   model.servers.forEach(function(server) {
-    let serverNode = $('#server-' + server.id, svg);
+    var serverNode = $('#server-' + server.id, svg);
     serverNode.attr('class', 'server ' + server.state);
     $('path', serverNode)
       .attr('d', arcSpec(serverSpec(server.id),
@@ -244,15 +244,15 @@ render.servers = function(serversSame) {
               (server.state == 'stopped'
                 ? 'gray'
                 : termColors[server.term % termColors.length]));
-      let votesGroup = $('.votes', serverNode);
+      var votesGroup = $('.votes', serverNode);
       votesGroup.empty();
       if (server.state == 'candidate') {
         model.servers.forEach(function (peer) {
-          let coord = util.circleCoord((peer.id - 1) / NUM_SERVERS,
+          var coord = util.circleCoord((peer.id - 1) / NUM_SERVERS,
                                        serverSpec(server.id).cx,
                                        serverSpec(server.id).cy,
                                        serverSpec(server.id).r * 5/8);
-          let state;
+          var state;
           if (peer == server || server.voteGranted[peer.id]) {
             state = 'have';
           } else if (peer.votedFor == server.id && peer.term == server.term) {
@@ -260,7 +260,7 @@ render.servers = function(serversSame) {
           } else {
             state = 'no';
           }
-          let granted = (peer == server
+          var granted = (peer == server
                            ? true
                            : server.voteGranted[peer.id]);
           votesGroup.append(
@@ -284,8 +284,8 @@ render.servers = function(serversSame) {
       serverNode.contextmenu({
         target: '#context-menu',
         before: function(e) {
-          let closemenu = this.closemenu.bind(this);
-          let list = $('ul', this.getMenu());
+          var closemenu = this.closemenu.bind(this);
+          var list = $('ul', this.getMenu());
           list.empty();
           serverActions.forEach(function(action) {
             list.append($('<li></li>')
@@ -319,24 +319,24 @@ render.entry = function(spec, entry, committed) {
 };
 
 render.logs = function() {
-  let LABEL_WIDTH = 25;
-  let INDEX_HEIGHT = 25;
-  let logsGroup = $('#logsGroup', svg);
+  var LABEL_WIDTH = 25;
+  var INDEX_HEIGHT = 25;
+  var logsGroup = $('#logsGroup', svg);
   logsGroup.empty();
   logsGroup.append(
     SVG('rect')
       .attr('id', 'logs')
       .attr(logsSpec));
-  let height = (logsSpec.height - INDEX_HEIGHT) / NUM_SERVERS;
-  let leader = getLeader();
-  let indexSpec = {
+  var height = (logsSpec.height - INDEX_HEIGHT) / NUM_SERVERS;
+  var leader = getLeader();
+  var indexSpec = {
     x: logsSpec.x + LABEL_WIDTH + logsSpec.width * 0.05,
     y: logsSpec.y + 2*height/6,
     width: logsSpec.width * 0.9,
     height: 2*height/3,
   };
-  for (let index = 1; index <= 10; ++index) {
-    let indexEntrySpec = {
+  for (var index = 1; index <= 10; ++index) {
+    var indexEntrySpec = {
       x: indexSpec.x + (index - 0.5) * indexSpec.width / 11,
       y: indexSpec.y,
       width: indexSpec.width / 11,
@@ -348,13 +348,13 @@ render.logs = function() {
           .text(index));
   }
   model.servers.forEach(function(server) {
-    let logSpec = {
+    var logSpec = {
       x: logsSpec.x + LABEL_WIDTH + logsSpec.width * 0.05,
       y: logsSpec.y + INDEX_HEIGHT + height * server.id - 5*height/6,
       width: logsSpec.width * 0.9,
       height: 2*height/3,
     };
-    let logEntrySpec = function(index) {
+    var logEntrySpec = function(index) {
       return {
         x: logSpec.x + (index - 1) * logSpec.width / 11,
         y: logSpec.y,
@@ -368,14 +368,14 @@ render.logs = function() {
           .attr('class', 'serverid ' + server.state)
           .attr({x: logSpec.x - LABEL_WIDTH*4/5,
                  y: logSpec.y + logSpec.height / 2}));
-    for (let index = 1; index <= 10; ++index) {
+    for (var index = 1; index <= 10; ++index) {
       logsGroup
         .append(SVG('rect')
           .attr(logEntrySpec(index))
           .attr('class', 'log'))
     }
     server.log.forEach(function(entry, i) {
-      let index = i + 1;
+      var index = i + 1;
         logsGroup.append(render.entry(
              logEntrySpec(index),
              entry,
@@ -398,7 +398,7 @@ render.logs = function() {
 };
 
 render.messages = function(messagesSame) {
-  let messagesGroup = $('#messages', svg);
+  var messagesGroup = $('#messages', svg);
   if (!messagesSame) {
     messagesGroup.empty();
     model.messages.forEach(function(message, i) {
@@ -411,7 +411,7 @@ render.messages = function(messagesSame) {
           .append(SVG('path').attr('class', 'message-direction')));
     });
     model.messages.forEach(function(message, i) {
-      let messageNode = $('a#message-' + i, svg);
+      var messageNode = $('a#message-' + i, svg);
       messageNode
         .click(function() {
           messageModal(model, message);
@@ -422,8 +422,8 @@ render.messages = function(messagesSame) {
       messageNode.contextmenu({
         target: '#context-menu',
         before: function(e) {
-          let closemenu = this.closemenu.bind(this);
-          let list = $('ul', this.getMenu());
+          var closemenu = this.closemenu.bind(this);
+          var list = $('ul', this.getMenu());
           list.empty();
           messageActions.forEach(function(action) {
             list.append($('<li></li>')
@@ -442,13 +442,13 @@ render.messages = function(messagesSame) {
     });
   }
   model.messages.forEach(function(message, i) {
-    let s = messageSpec(message.from, message.to,
+    var s = messageSpec(message.from, message.to,
                         (model.time - message.sendTime) /
                         (message.recvTime - message.sendTime));
     $('#message-' + i + ' circle', messagesGroup)
       .attr(s);
     if (message.direction == 'reply') {
-      let dlist = [];
+      var dlist = [];
       dlist.push('M', s.cx - s.r, comma, s.cy,
                  'L', s.cx + s.r, comma, s.cy);
       if ((message.type == 'RequestVote' && message.granted) ||
@@ -459,7 +459,7 @@ render.messages = function(messagesSame) {
       $('#message-' + i + ' path.message-success', messagesGroup)
         .attr('d', dlist.join(' '));
     }
-    let dir = $('#message-' + i + ' path.message-direction', messagesGroup);
+    var dir = $('#message-' + i + ' path.message-direction', messagesGroup);
     if (playback.isPaused()) {
       dir.attr('style', 'marker-end:url(#TriangleOutS-' + message.type + ')')
          .attr('d',
@@ -472,26 +472,26 @@ render.messages = function(messagesSame) {
   });
 };
 
-let relTime = function(time, now) {
+var relTime = function(time, now) {
   if (time == Infinity)
     return 'infinity';
-  let sign = time > now ? '+' : '';
+  var sign = time > now ? '+' : '';
   return sign + ((time - now) / 1e3).toFixed(3) + 'ms';
 };
 
-let button = function(label) {
+var button = function(label) {
   return $('<button type="button" class="btn btn-default"></button>')
     .text(label);
 };
 
 serverModal = function(model, server) {
-  let m = $('#modal-details');
+  var m = $('#modal-details');
   $('.modal-title', m).text('Server ' + server.id);
   $('.modal-dialog', m).removeClass('modal-sm').addClass('modal-lg');
-  let li = function(label, value) {
+  var li = function(label, value) {
     return '<dt>' + label + '</dt><dd>' + value + '</dd>';
   };
-  let peerTable = $('<table></table>')
+  var peerTable = $('<table></table>')
     .addClass('table table-condensed')
     .append($('<tr></tr>')
       .append('<th>peer</th>')
@@ -522,7 +522,7 @@ serverModal = function(model, server) {
       .append($('<dt>peers</dt>'))
       .append($('<dd></dd>').append(peerTable))
     );
-  let footer = $('.modal-footer', m);
+  var footer = $('.modal-footer', m);
   footer.empty();
   serverActions.forEach(function(action) {
     footer.append(button(action[0])
@@ -536,13 +536,13 @@ serverModal = function(model, server) {
 };
 
 messageModal = function(model, message) {
-  let m = $('#modal-details');
+  var m = $('#modal-details');
   $('.modal-dialog', m).removeClass('modal-lg').addClass('modal-sm');
   $('.modal-title', m).text(message.type + ' ' + message.direction);
-  let li = function(label, value) {
+  var li = function(label, value) {
     return '<dt>' + label + '</dt><dd>' + value + '</dd>';
   };
-  let fields = $('<dl class="dl-horizontal"></dl>')
+  var fields = $('<dl class="dl-horizontal"></dl>')
       .append(li('from', 'S' + message.from))
       .append(li('to', 'S' + message.to))
       .append(li('sent', relTime(message.sendTime, model.time)))
@@ -557,7 +557,7 @@ messageModal = function(model, message) {
     }
   } else if (message.type == 'AppendEntries') {
     if (message.direction == 'request') {
-      let entries = '[' + message.entries.map(function(e) {
+      var entries = '[' + message.entries.map(function(e) {
             return e.term;
       }).join(' ') + ']';
       fields.append(li('prevIndex', message.prevIndex));
@@ -572,7 +572,7 @@ messageModal = function(model, message) {
   $('.modal-body', m)
     .empty()
     .append(fields);
-  let footer = $('.modal-footer', m);
+  var footer = $('.modal-footer', m);
   footer.empty();
   messageActions.forEach(function(action) {
     footer.append(button(action[0])
@@ -588,9 +588,9 @@ messageModal = function(model, message) {
 render.update = function() {
   raft.update(model);
 
-  let last = modelHistory[modelHistory.length - 1];
-  let serversSame = util.equals(last.servers, model.servers);
-  let messagesSame = util.equals(last.messages, model.messages);
+  var last = modelHistory[modelHistory.length - 1];
+  var serversSame = util.equals(last.servers, model.servers);
+  var messagesSame = util.equals(last.messages, model.messages);
   if (model.time == 0 || playback.isTimeTraveling()) {
     serversSame = false;
     messagesSame = false;
@@ -606,7 +606,7 @@ render.update = function() {
 };
 
 
-let sliderTransform = function(v) {
+var sliderTransform = function(v) {
   v = Math.pow(v, 3) + 100;
   if (v < 1)
     return 1;
@@ -630,14 +630,14 @@ $(window).keyup(function(e) {
       e.keyCode == 190 /* dot, emitted by Logitech remote */) {
     playback.toggle();
   } else if (e.keyCode == 'C'.charCodeAt(0)) {
-    let leader = getLeader();
+    var leader = getLeader();
     if (leader !== null) {
       playback.endTimeTravel();
       raft.clientRequest(model, leader);
       render.update();
     }
   } else if (e.keyCode == 'R'.charCodeAt(0)) {
-    let leader = getLeader();
+    var leader = getLeader();
     if (leader !== null) {
       playback.endTimeTravel();
       raft.stop(model, leader);
@@ -672,8 +672,8 @@ $('#modal-details').on('show.bs.modal', function(e) {
 });
 
 getLeader = function() {
-  let leader = null;
-  let term = 0;
+  var leader = null;
+  var term = 0;
   model.servers.forEach(function(server) {
     if (server.state == 'leader' &&
         server.term > term) {
@@ -703,8 +703,8 @@ timeSlider.on('slideStart', function() {
   playback.startTimeTravel();
 });
 timeSlider.on('slide', function() {
-  let t = timeSlider.slider('getValue');
-  let i = util.greatestLower(modelHistory, function(m) { return m.time > t; });
+  var t = timeSlider.slider('getValue');
+  var i = util.greatestLower(modelHistory, function(m) { return m.time > t; });
   model = util.clone(modelHistory[i]);
   model.time = t;
   render.update();

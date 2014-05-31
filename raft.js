@@ -16,7 +16,7 @@ var BATCH_SIZE = 1;
 
 (function() {
 
-let sendMessage = function(model, message) {
+var sendMessage = function(model, message) {
   message.sendTime = model.time;
   message.recvTime = model.time +
                      MIN_RPC_LATENCY +
@@ -24,12 +24,12 @@ let sendMessage = function(model, message) {
   model.messages.push(message);
 };
 
-let sendRequest = function(model, request) {
+var sendRequest = function(model, request) {
   request.direction = 'request';
   sendMessage(model, request);
 };
 
-let sendReply = function(model, request, reply) {
+var sendReply = function(model, request, reply) {
   reply.from = request.to;
   reply.to = request.from;
   reply.type = request.type;
@@ -37,7 +37,7 @@ let sendReply = function(model, request, reply) {
   sendMessage(model, reply);
 };
 
-let logTerm = function(log, index) {
+var logTerm = function(log, index) {
   if (index < 1 || index > log.length) {
     return 0;
   } else {
@@ -45,9 +45,9 @@ let logTerm = function(log, index) {
   }
 };
 
-let rules = {};
+var rules = {};
 
-let makeElectionAlarm = function(now) {
+var makeElectionAlarm = function(now) {
   return now + (Math.random() + 1) * ELECTION_TIMEOUT;
 };
 
@@ -69,7 +69,7 @@ raft.server = function(id, peers) {
   };
 };
 
-let stepDown = function(model, server, term) {
+var stepDown = function(model, server, term) {
   server.term = term;
   server.state = 'follower';
   server.votedFor = null;
@@ -124,8 +124,8 @@ rules.sendAppendEntries = function(model, server, peer) {
       (server.heartbeatDue[peer] < model.time ||
        (server.nextIndex[peer] <= server.log.length &&
         server.rpcDue[peer] < model.time))) {
-    let prevIndex = server.nextIndex[peer] - 1;
-    let lastIndex = Math.min(prevIndex + BATCH_SIZE,
+    var prevIndex = server.nextIndex[peer] - 1;
+    var lastIndex = Math.min(prevIndex + BATCH_SIZE,
                              server.log.length);
     if (server.matchIndex[peer] + 1 < server.nextIndex[peer])
       lastIndex = prevIndex;
@@ -144,19 +144,19 @@ rules.sendAppendEntries = function(model, server, peer) {
 };
 
 rules.advanceCommitIndex = function(model, server) {
-  let matchIndexes = util.mapValues(server.matchIndex).concat(server.log.length);
+  var matchIndexes = util.mapValues(server.matchIndex).concat(server.log.length);
   matchIndexes.sort();
-  let n = matchIndexes[Math.floor(NUM_SERVERS / 2)];
+  var n = matchIndexes[Math.floor(NUM_SERVERS / 2)];
   if (server.state == 'leader' &&
       logTerm(server.log, n) == server.term) {
     server.commitIndex = Math.max(server.commitIndex, n);
   }
 };
 
-let handleRequestVoteRequest = function(model, server, request) {
+var handleRequestVoteRequest = function(model, server, request) {
   if (server.term < request.term)
     stepDown(model, server, request.term);
-  let granted = false;
+  var granted = false;
   if (server.term == request.term &&
       (server.votedFor === null ||
        server.votedFor == request.from) &&
@@ -173,7 +173,7 @@ let handleRequestVoteRequest = function(model, server, request) {
   });
 };
 
-let handleRequestVoteReply = function(model, server, reply) {
+var handleRequestVoteReply = function(model, server, reply) {
   if (server.term < reply.term)
     stepDown(model, server, reply.term);
   if (server.state == 'candidate' &&
@@ -183,9 +183,9 @@ let handleRequestVoteReply = function(model, server, reply) {
   }
 };
 
-let handleAppendEntriesRequest = function(model, server, request) {
-  let success = false;
-  let matchIndex = 0;
+var handleAppendEntriesRequest = function(model, server, request) {
+  var success = false;
+  var matchIndex = 0;
   if (server.term < request.term)
     stepDown(model, server, request.term);
   if (server.term == request.term) {
@@ -195,8 +195,8 @@ let handleAppendEntriesRequest = function(model, server, request) {
         (request.prevIndex <= server.log.length &&
          logTerm(server.log, request.prevIndex) == request.prevTerm)) {
       success = true;
-      let index = request.prevIndex;
-      for (let i = 0; i < request.entries.length; i += 1) {
+      var index = request.prevIndex;
+      for (var i = 0; i < request.entries.length; i += 1) {
         index += 1;
         if (logTerm(server.log, index) != request.entries[i].term) {
           while (server.log.length > index - 1)
@@ -216,7 +216,7 @@ let handleAppendEntriesRequest = function(model, server, request) {
   });
 };
 
-let handleAppendEntriesReply = function(model, server, reply) {
+var handleAppendEntriesReply = function(model, server, reply) {
   if (server.term < reply.term)
     stepDown(model, server, reply.term);
   if (server.state == 'leader' &&
@@ -232,7 +232,7 @@ let handleAppendEntriesReply = function(model, server, reply) {
   }
 };
 
-let handleMessage = function(model, server, message) {
+var handleMessage = function(model, server, message) {
   if (server.state == 'stopped')
     return;
   if (message.type == 'RequestVote') {
@@ -259,8 +259,8 @@ raft.update = function(model) {
       rules.sendAppendEntries(model, server, peer);
     });
   });
-  let deliver = [];
-  let keep = [];
+  var deliver = [];
+  var keep = [];
   model.messages.forEach(function(message) {
     if (message.recvTime <= model.time)
       deliver.push(message);
@@ -316,7 +316,7 @@ raft.clientRequest = function(model, server) {
 };
 
 raft.spreadTimers = function(model) {
-  let timers = [];
+  var timers = [];
   model.servers.forEach(function(server) {
     if (server.electionAlarm > model.time &&
         server.electionAlarm < Infinity) {
@@ -347,7 +347,7 @@ raft.spreadTimers = function(model) {
 
 raft.alignTimers = function(model) {
   raft.spreadTimers(model);
-  let timers = [];
+  var timers = [];
   model.servers.forEach(function(server) {
     if (server.electionAlarm > model.time &&
         server.electionAlarm < Infinity) {
@@ -364,7 +364,7 @@ raft.alignTimers = function(model) {
 };
 
 raft.setupLogReplicationScenario = function(model) {
-  let s1 = model.servers[0];
+  var s1 = model.servers[0];
   raft.restart(model, model.servers[1]);
   raft.restart(model, model.servers[2]);
   raft.restart(model, model.servers[3]);

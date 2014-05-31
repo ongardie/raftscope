@@ -12,7 +12,7 @@ util.value = function(v) {
 };
 
 util.circleCoord = function(frac, cx, cy, r) {
-  let radians = 2 * Math.PI * (0.75 + frac);
+  var radians = 2 * Math.PI * (0.75 + frac);
   return {
     x: cx + r * Math.cos(radians),
     y: cy + r * Math.sin(radians),
@@ -20,7 +20,7 @@ util.circleCoord = function(frac, cx, cy, r) {
 };
 
 util.countTrue = function(bools) {
-  let count = 0;
+  var count = 0;
   bools.forEach(function(b) {
     if (b)
       count += 1;
@@ -29,7 +29,7 @@ util.countTrue = function(bools) {
 };
 
 util.makeMap = function(keys, value) {
-  let m = {};
+  var m = {};
   keys.forEach(function(key) {
     m[key] = value;
   });
@@ -56,7 +56,7 @@ util.equals = function(x, y) {
     // they must have the exact same prototype chain, the closest we can do is
     // test there constructor.
 
-  for ( let p in x ) {
+  for ( var p in x ) {
     if ( ! x.hasOwnProperty( p ) ) continue;
       // other properties were tested using x.constructor === y.constructor
 
@@ -73,7 +73,7 @@ util.equals = function(x, y) {
       // Objects and Arrays must be tested recursively
   }
 
-  for ( let p in y ) {
+  for ( var p in y ) {
     if ( y.hasOwnProperty( p ) && ! x.hasOwnProperty( p ) ) return false;
       // allows x[ p ] to be set to undefined
   }
@@ -81,10 +81,10 @@ util.equals = function(x, y) {
 };
 
 util.greatestLower = function(a, gt) {
-  let bs = function(low, high) {
+  var bs = function(low, high) {
     if (high < low)
       return low - 1;
-    let mid = Math.floor((low + high) / 2);
+    var mid = Math.floor((low + high) / 2);
     if (gt(a[mid]))
       return bs(low, mid - 1);
     else
