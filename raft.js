@@ -298,7 +298,9 @@ raft.restart = function(model, server) {
 };
 
 raft.drop = function(model, message) {
-  message.recvTime = Infinity;
+  model.messages = model.messages.filter(function(m) {
+    return m !== message;
+  });
 };
 
 raft.timeout = function(model, server) {

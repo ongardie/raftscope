@@ -4,19 +4,25 @@
 /* jshint jquery: true */
 /* global util */
 /* global raft */
+/* global makeState */
 /* global ELECTION_TIMEOUT */
 /* global NUM_SERVERS */
 'use strict';
 
-var svg;
-var model;
-var ARC_WIDTH = 5;
 var playback;
-var getLeader;
-var modelHistory;
 var render = {};
+var state;
 
 $(function() {
+
+var ARC_WIDTH = 5;
+
+state = makeState({
+  servers: [],
+  messages: [],
+});
+
+var sliding = false;
 
 var termColors = [
   '#66c2a5',
@@ -32,27 +38,19 @@ var SVG = function(tag) {
 };
 
 playback = function() {
-  var timeTravel = false;
   var paused = false;
   var pause = function() {
     paused = true;
     $('#time-icon')
       .removeClass('glyphicon-time')
       .addClass('glyphicon-pause');
-    render.update();
   };
   var resume = function() {
     if (paused) {
       paused = false;
-      var i = util.greatestLower(modelHistory,
-                                 function(m) { return m.time > model.time; });
-      while (modelHistory.length - 1 > i)
-        modelHistory.pop();
-      timeTravel = false;
       $('#time-icon')
         .removeClass('glyphicon-pause')
         .addClass('glyphicon-time');
-      render.update();
     }
   };
   return {
@@ -67,28 +65,8 @@ playback = function() {
     isPaused: function() {
       return paused;
     },
-    startTimeTravel: function() {
-      pause();
-      timeTravel = true;
-    },
-    endTimeTravel: function() {
-      if (timeTravel) {
-        resume();
-        pause();
-      }
-    },
-    isTimeTraveling: function() {
-      return timeTravel;
-    },
   };
 }();
-
-model = {
-  servers: [],
-  messages: [],
-  time: 0,
-  seed: 0,
-};
 
 (function() {
   for (var i = 1; i <= NUM_SERVERS; i += 1) {
@@ -97,11 +75,11 @@ model = {
         if (i != j)
           peers.push(j);
       }
-      model.servers.push(raft.server(i, peers));
+      state.current.servers.push(raft.server(i, peers));
   }
 })();
 
-svg = $('svg');
+var svg = $('svg');
 
 var ringSpec = {
   cx: 210,
@@ -132,7 +110,7 @@ $('#ring', svg).attr(ringSpec);
 var serverModal;
 var messageModal;
 
-model.servers.forEach(function (server) {
+state.current.servers.forEach(function (server) {
   var s = serverSpec(server.id);
   $('#servers', svg).append(
     SVG('g')
@@ -209,10 +187,10 @@ var arcSpec = function(spec, fraction) {
 var timeSlider;
 
 render.clock = function() {
-  if (playback.isTimeTraveling())
-    return;
-  timeSlider.slider('setAttribute', 'max', model.time);
-  timeSlider.slider('setValue', model.time, false);
+  if (!sliding) {
+    timeSlider.slider('setAttribute', 'max', state.getMaxTime());
+    timeSlider.slider('setValue', state.current.time, false);
+  }
 };
 
 var serverActions = [
@@ -228,11 +206,11 @@ var messageActions = [
 ];
 
 render.servers = function(serversSame) {
-  model.servers.forEach(function(server) {
+  state.current.servers.forEach(function(server) {
     var serverNode = $('#server-' + server.id, svg);
     $('path', serverNode)
       .attr('d', arcSpec(serverSpec(server.id),
-         util.clamp((server.electionAlarm - model.time) /
+         util.clamp((server.electionAlarm - state.current.time) /
                     (ELECTION_TIMEOUT * 2),
                     0, 1)));
     if (!serversSame) {
@@ -245,7 +223,7 @@ render.servers = function(serversSame) {
       var votesGroup = $('.votes', serverNode);
       votesGroup.empty();
       if (server.state == 'candidate') {
-        model.servers.forEach(function (peer) {
+        state.current.servers.forEach(function (peer) {
           var coord = util.circleCoord((peer.id - 1) / NUM_SERVERS,
                                        serverSpec(server.id).cx,
                                        serverSpec(server.id).cy,
@@ -272,7 +250,7 @@ render.servers = function(serversSame) {
       serverNode
         .unbind('click')
         .click(function() {
-          serverModal(model, server);
+          serverModal(state.current, server);
           return false;
         });
       if (serverNode.data('context'))
@@ -288,7 +266,9 @@ render.servers = function(serversSame) {
               .append($('<a href="#"></a>')
                 .text(action[0])
                 .click(function() {
-                  action[1](model, server);
+                  state.fork();
+                  action[1](state.current, server);
+                  state.save();
                   render.update();
                   closemenu();
                   return false;
@@ -346,7 +326,7 @@ render.logs = function() {
           .attr(indexEntrySpec)
           .text(index));
   }
-  model.servers.forEach(function(server) {
+  state.current.servers.forEach(function(server) {
     var logSpec = {
       x: logsSpec.x + LABEL_WIDTH + logsSpec.width * 0.05,
       y: logsSpec.y + INDEX_HEIGHT + height * server.id - 5*height/6,
@@ -404,7 +384,7 @@ render.messages = function(messagesSame) {
   var messagesGroup = $('#messages', svg);
   if (!messagesSame) {
     messagesGroup.empty();
-    model.messages.forEach(function(message, i) {
+    state.current.messages.forEach(function(message, i) {
       var a = SVG('a')
           .attr('id', 'message-' + i)
           .attr('class', 'message ' + message.direction + ' ' + message.type)
@@ -415,11 +395,11 @@ render.messages = function(messagesSame) {
         a.append(SVG('path').attr('class', 'message-success'));
       messagesGroup.append(a);
     });
-    model.messages.forEach(function(message, i) {
+    state.current.messages.forEach(function(message, i) {
       var messageNode = $('a#message-' + i, svg);
       messageNode
         .click(function() {
-          messageModal(model, message);
+          messageModal(state.current, message);
           return false;
         });
       if (messageNode.data('context'))
@@ -435,7 +415,9 @@ render.messages = function(messagesSame) {
               .append($('<a href="#"></a>')
                 .text(action[0])
                 .click(function() {
-                  action[1](model, message);
+                  state.fork();
+                  action[1](state.current, message);
+                  state.save();
                   render.update();
                   closemenu();
                   return true;
@@ -446,9 +428,9 @@ render.messages = function(messagesSame) {
       });
     });
   }
-  model.messages.forEach(function(message, i) {
+  state.current.messages.forEach(function(message, i) {
     var s = messageSpec(message.from, message.to,
-                        (model.time - message.sendTime) /
+                        (state.current.time - message.sendTime) /
                         (message.recvTime - message.sendTime));
     $('#message-' + i + ' circle', messagesGroup)
       .attr(s);
@@ -469,7 +451,7 @@ render.messages = function(messagesSame) {
       dir.attr('style', 'marker-end:url(#TriangleOutS-' + message.type + ')')
          .attr('d',
            messageArrowSpec(message.from, message.to,
-                            (model.time - message.sendTime) /
+                            (state.current.time - message.sendTime) /
                             (message.recvTime - message.sendTime)));
     } else {
       dir.attr('style', '').attr('d', 'M 0,0'); // clear
@@ -532,7 +514,9 @@ serverModal = function(model, server) {
   serverActions.forEach(function(action) {
     footer.append(button(action[0])
       .click(function(){
+        state.fork();
         action[1](model, server);
+        state.save();
         render.update();
         m.modal('hide');
       }));
@@ -582,34 +566,15 @@ messageModal = function(model, message) {
   messageActions.forEach(function(action) {
     footer.append(button(action[0])
       .click(function(){
+        state.fork();
         action[1](model, message);
+        state.save();
         render.update();
         m.modal('hide');
       }));
   });
   m.modal();
 };
-
-render.update = function() {
-  raft.update(model);
-
-  var last = modelHistory[modelHistory.length - 1];
-  var serversSame = util.equals(last.servers, model.servers);
-  var messagesSame = util.equals(last.messages, model.messages);
-  if (model.time === 0 || playback.isTimeTraveling()) {
-    serversSame = false;
-    messagesSame = false;
-  } else {
-    if (!serversSame || !messagesSame)
-      modelHistory.push(util.clone(model));
-  }
-  render.clock();
-  render.servers(serversSame);
-  render.messages(messagesSame);
-  if (!serversSame)
-    render.logs();
-};
-
 
 var sliderTransform = function(v) {
   v = Math.pow(v, 3) + 100;
@@ -621,16 +586,42 @@ var sliderTransform = function(v) {
     return v;
 };
 
-var last = null;
-var step = function(timestamp) {
-  if (!playback.isPaused() && last !== null && timestamp - last < 500) {
-    model.time += (timestamp - last) * 1000 / sliderTransform($('#speed').slider('getValue'));
-    render.update();
+var lastRenderedO = null;
+var lastRenderedV = null;
+render.update = function() {
+  // Same indicates both underlying object identity hasn't changed and its
+  // value hasn't changed.
+  var serversSame = false;
+  var messagesSame = false;
+  if (lastRenderedO == state.current) {
+    serversSame = util.equals(lastRenderedV.servers, state.current.servers);
+    messagesSame = util.equals(lastRenderedV.messages, state.current.messages);
   }
-  last = timestamp;
-  window.requestAnimationFrame(step);
+  lastRenderedO = state;
+  lastRenderedV = state.base();
+  render.clock();
+  render.servers(serversSame);
+  render.messages(messagesSame);
+  if (!serversSame)
+    render.logs();
 };
-window.requestAnimationFrame(step);
+
+(function() {
+  var last = null;
+  var step = function(timestamp) {
+    if (!playback.isPaused() && last !== null && timestamp - last < 500) {
+      var wallMicrosElapsed = (timestamp - last) * 1000;
+      var speed = sliderTransform($('#speed').slider('getValue'));
+      var modelMicrosElapsed = wallMicrosElapsed / speed;
+      var modelMicros = state.current.time + modelMicrosElapsed;
+      state.seek(modelMicros);
+      render.update();
+    }
+    last = timestamp;
+    window.requestAnimationFrame(step);
+  };
+  window.requestAnimationFrame(step);
+})();
 
 $(window).keyup(function(e) {
   if (e.target.id == "title")
@@ -641,33 +632,42 @@ $(window).keyup(function(e) {
     playback.toggle();
   } else if (e.keyCode == 'C'.charCodeAt(0)) {
     if (leader !== null) {
-      playback.endTimeTravel();
-      raft.clientRequest(model, leader);
+      state.fork();
+      raft.clientRequest(state.current, leader);
+      state.save();
       render.update();
     }
   } else if (e.keyCode == 'R'.charCodeAt(0)) {
     if (leader !== null) {
-      playback.endTimeTravel();
-      raft.stop(model, leader);
-      raft.resume(model, leader);
+      state.fork();
+      raft.stop(state.current, leader);
+      raft.resume(state.current, leader);
+      state.save();
       render.update();
     }
   } else if (e.keyCode == 'T'.charCodeAt(0)) {
-    playback.endTimeTravel();
-    raft.spreadTimers(model);
+    state.fork();
+    raft.spreadTimers(state.current);
+    state.save();
     render.update();
   } else if (e.keyCode == 'A'.charCodeAt(0)) {
-    playback.endTimeTravel();
-    raft.alignTimers(model);
+    state.fork();
+    raft.alignTimers(state.current);
+    state.save();
     render.update();
   } else if (e.keyCode == 'L'.charCodeAt(0)) {
-    playback.endTimeTravel();
+    state.fork();
     playback.pause();
-    raft.setupLogReplicationScenario(model);
+    raft.setupLogReplicationScenario(state.current);
+    state.save();
     render.update();
   } else if (e.keyCode == 'B'.charCodeAt(0)) {
-    playback.endTimeTravel();
-    raft.resumeAll(model);
+    state.fork();
+    raft.resumeAll(state.current);
+    state.save();
+    render.update();
+  } else if (e.keyCode == 'F'.charCodeAt(0)) {
+    state.fork();
     render.update();
   } else if (e.keyCode == 191 && e.shiftKey) { /* question mark */
     playback.pause();
@@ -679,10 +679,10 @@ $('#modal-details').on('show.bs.modal', function(e) {
   playback.pause();
 });
 
-getLeader = function() {
+var getLeader = function() {
   var leader = null;
   var term = 0;
-  model.servers.forEach(function(server) {
+  state.current.servers.forEach(function(server) {
     if (server.state == 'leader' &&
         server.term > term) {
         leader = server;
@@ -708,13 +708,14 @@ timeSlider.slider({
   },
 });
 timeSlider.on('slideStart', function() {
-  playback.startTimeTravel();
+  playback.pause();
+  sliding = true;
+});
+timeSlider.on('slideStop', function() {
+  sliding = false;
 });
 timeSlider.on('slide', function() {
-  var t = timeSlider.slider('getValue');
-  var i = util.greatestLower(modelHistory, function(m) { return m.time > t; });
-  model = util.clone(modelHistory[i]);
-  model.time = t;
+  state.seek(timeSlider.slider('getValue'));
   render.update();
 });
 
@@ -727,7 +728,17 @@ $('#time-button')
 // enable tooltips
 $('[data-toggle="tooltip"]').tooltip();
 
-modelHistory = [util.clone(model)];
+state.updater = function(state) {
+  raft.update(state.current);
+  var time = state.current.time;
+  var base = state.base(time);
+  state.current.time = base.time;
+  var same = util.equals(state.current, base);
+  state.current.time = time;
+  return !same;
+};
+
+state.init();
 render.update();
 });
 
