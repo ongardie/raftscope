@@ -1,4 +1,3 @@
-/* jshint esnext: true */
 /* jshint globalstrict: true */
 /* jshint browser: true */
 /* jshint devel: true */
@@ -241,8 +240,7 @@ render.servers = function(serversSame) {
       serverNode.attr('class', 'server ' + server.state);
       $('circle.background', serverNode)
         .attr('style', 'fill: ' +
-              (server.state == 'stopped'
-                ? 'gray'
+              (server.state == 'stopped' ? 'gray'
                 : termColors[server.term % termColors.length]));
       var votesGroup = $('.votes', serverNode);
       votesGroup.empty();
@@ -260,9 +258,7 @@ render.servers = function(serversSame) {
           } else {
             state = 'no';
           }
-          var granted = (peer == server
-                           ? true
-                           : server.voteGranted[peer.id]);
+          var granted = (peer == server ? true : server.voteGranted[peer.id]);
           votesGroup.append(
             SVG('circle')
               .attr({
@@ -377,7 +373,7 @@ render.logs = function() {
     for (var index = 1; index <= 10; ++index) {
       log.append(SVG('rect')
           .attr(logEntrySpec(index))
-          .attr('class', 'log'))
+          .attr('class', 'log'));
     }
     server.log.forEach(function(entry, i) {
       var index = i + 1;
@@ -600,7 +596,7 @@ render.update = function() {
   var last = modelHistory[modelHistory.length - 1];
   var serversSame = util.equals(last.servers, model.servers);
   var messagesSame = util.equals(last.messages, model.messages);
-  if (model.time == 0 || playback.isTimeTraveling()) {
+  if (model.time === 0 || playback.isTimeTraveling()) {
     serversSame = false;
     messagesSame = false;
   } else {
@@ -639,18 +635,17 @@ window.requestAnimationFrame(step);
 $(window).keyup(function(e) {
   if (e.target.id == "title")
     return;
+  var leader = getLeader();
   if (e.keyCode == ' '.charCodeAt(0) ||
       e.keyCode == 190 /* dot, emitted by Logitech remote */) {
     playback.toggle();
   } else if (e.keyCode == 'C'.charCodeAt(0)) {
-    var leader = getLeader();
     if (leader !== null) {
       playback.endTimeTravel();
       raft.clientRequest(model, leader);
       render.update();
     }
   } else if (e.keyCode == 'R'.charCodeAt(0)) {
-    var leader = getLeader();
     if (leader !== null) {
       playback.endTimeTravel();
       raft.stop(model, leader);

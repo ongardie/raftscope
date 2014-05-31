@@ -1,4 +1,3 @@
-/* jshint esnext: true */
 /* jshint globalstrict: true */
 /* jshint browser: true */
 /* jshint devel: true */
@@ -56,7 +55,8 @@ util.equals = function(x, y) {
     // they must have the exact same prototype chain, the closest we can do is
     // test there constructor.
 
-  for ( var p in x ) {
+  var p;
+  for ( p in x ) {
     if ( ! x.hasOwnProperty( p ) ) continue;
       // other properties were tested using x.constructor === y.constructor
 
@@ -73,7 +73,7 @@ util.equals = function(x, y) {
       // Objects and Arrays must be tested recursively
   }
 
-  for ( var p in y ) {
+  for ( p in y ) {
     if ( y.hasOwnProperty( p ) && ! x.hasOwnProperty( p ) ) return false;
       // allows x[ p ] to be set to undefined
   }

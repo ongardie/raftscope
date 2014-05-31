@@ -1,4 +1,3 @@
-/* jshint esnext: true */
 /* jshint globalstrict: true */
 /* jshint browser: true */
 /* jshint devel: true */
