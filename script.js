@@ -384,11 +384,13 @@ render.logs = function() {
     if (leader !== null && leader != server) {
       logsGroup.append(
         SVG('circle')
+          .attr('title', 'match index').tooltip({container: 'body'})
           .attr({cx: logEntrySpec(leader.matchIndex[server.id] + 1).x,
                  cy: logSpec.y + logSpec.height,
                  r: 5}));
       var x = logEntrySpec(leader.nextIndex[server.id] + 0.5).x;
       logsGroup.append(SVG('path')
+        .attr('title', 'next index').tooltip({container: 'body'})
         .attr('style', 'marker-end:url(#TriangleOutM); stroke: black')
         .attr('d', ['M', x, comma, logSpec.y + logSpec.height + logSpec.height/3,
                     'L', x, comma, logSpec.y + logSpec.height + logSpec.height/6].join(' '))
@@ -402,13 +404,15 @@ render.messages = function(messagesSame) {
   if (!messagesSame) {
     messagesGroup.empty();
     model.messages.forEach(function(message, i) {
-      messagesGroup.append(
-        SVG('a')
+      var a = SVG('a')
           .attr('id', 'message-' + i)
           .attr('class', 'message ' + message.direction + ' ' + message.type)
+          .attr('title', message.type + ' ' + message.direction).tooltip({container: 'body'})
           .append(SVG('circle'))
-          .append(SVG('path').attr('class', 'message-success'))
-          .append(SVG('path').attr('class', 'message-direction')));
+          .append(SVG('path').attr('class', 'message-direction'));
+      if (message.direction == 'reply')
+        a.append(SVG('path').attr('class', 'message-success'));
+      messagesGroup.append(a);
     });
     model.messages.forEach(function(message, i) {
       var messageNode = $('a#message-' + i, svg);
@@ -719,6 +723,9 @@ $('#time-button')
     playback.toggle();
     return false;
   });
+
+// enable tooltips
+$('[data-toggle="tooltip"]').tooltip();
 
 modelHistory = [util.clone(model)];
 render.update();
