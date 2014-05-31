@@ -12,7 +12,6 @@
 var svg;
 var model;
 var ARC_WIDTH = 5;
-var UPDATE_INTERVAL = 10;
 var playback;
 var getLeader;
 var modelHistory;
@@ -617,14 +616,16 @@ var sliderTransform = function(v) {
     return v;
 };
 
-var periodic = function() {
-  if (!playback.isPaused()) {
-    model.time += UPDATE_INTERVAL * 1000 / sliderTransform($('#speed').slider('getValue'));
+var last = null;
+var step = function(timestamp) {
+  if (!playback.isPaused() && last !== null && timestamp - last < 500) {
+    model.time += (timestamp - last) * 1000 / sliderTransform($('#speed').slider('getValue'));
     render.update();
   }
-  window.setTimeout(periodic, UPDATE_INTERVAL);
+  last = timestamp;
+  window.requestAnimationFrame(step);
 };
-window.setTimeout(periodic, UPDATE_INTERVAL);
+window.requestAnimationFrame(step);
 
 $(window).keyup(function(e) {
   if (e.target.id == "title")
