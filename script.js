@@ -657,6 +657,9 @@ $(window).keyup(function(e) {
     playback.endTimeTravel();
     raft.resumeAll(model);
     render.update();
+  } else if (e.keyCode == 191 && e.shiftKey) { /* question mark */
+    playback.pause();
+    $('#modal-help').modal();
   }
 });
 
