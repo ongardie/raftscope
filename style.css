@@ -47,7 +47,7 @@ svg .server.follower path {
 
 svg .server text {
   text-anchor: middle;
-  alignment-baseline: central;
+  dominant-baseline: central;
   text-align: center;
 }
 
@@ -108,7 +108,7 @@ svg .message.reply circle {
 
 svg #logsGroup text {
   text-anchor: middle;
-  alignment-baseline: central;
+  dominant-baseline: central;
   text-align: center;
 }
 
@@ -131,8 +131,8 @@ svg .entry.committed rect {
 
 svg .entry text {
   text-anchor: middle;
-  alignment-baseline: central;
-  text-align: center';
+  dominant-baseline: central;
+  text-align: center;
 }
 
 @media (min-width: 768px) {
