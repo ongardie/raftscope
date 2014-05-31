@@ -28,6 +28,10 @@ let termColors = [
   '#ffd92f',
 ];
 
+let SVG = function(tag) {
+   return $(document.createElementNS('http://www.w3.org/2000/svg', tag));
+};
+
 playback = function() {
   let timeTravel = false;
   let paused = false;
@@ -132,24 +136,27 @@ let messageModal;
 model.servers.forEach(function (server) {
   let s = serverSpec(server.id);
   $('#servers', svg).append(
-    $('<g></g>')
+    SVG('g')
       .attr('id', 'server-' + server.id)
       .attr('class', 'server')
-      .append($('<text class="serverid" />')
+      .append(SVG('text')
+                 .attr('class', 'serverid')
                  .text('S' + server.id)
                  .attr(util.circleCoord((server.id - 1) / NUM_SERVERS,
                                         ringSpec.cx, ringSpec.cy, ringSpec.r + 50)))
-      .append($('<a xlink:href="#"></a>')
-        .append($('<circle class="background" />')
+      .append(SVG('a')
+        .append(SVG('circle')
+                   .attr('class', 'background')
                    .attr(s))
-        .append($('<g class="votes"></g>'))
-        .append($('<path />')
+        .append(SVG('g')
+                    .attr('class', 'votes'))
+        .append(SVG('path')
                    .attr('style', 'stroke-width: ' + ARC_WIDTH))
-        .append($('<text class="term" />')
+        .append(SVG('text')
+                   .attr('class', 'term')
                    .attr({x: s.cx, y: s.cy}))
         ));
 });
-util.reparseSVG($('#servers'));
 
 let MESSAGE_RADIUS = 8;
 
@@ -257,7 +264,7 @@ render.servers = function(serversSame) {
                            ? true
                            : server.voteGranted[peer.id]);
           votesGroup.append(
-            $('<circle />')
+            SVG('circle')
               .attr({
                 cx: coord.x,
                 cy: coord.y,
@@ -265,7 +272,6 @@ render.servers = function(serversSame) {
               })
               .attr('class', state));
         });
-        util.reparseSVG(votesGroup);
       }
       serverNode
         .unbind('click')
@@ -300,13 +306,13 @@ render.servers = function(serversSame) {
 };
 
 render.entry = function(spec, entry, committed) {
-  return $('<g></g>')
+  return SVG('g')
     .attr('class', 'entry ' + (committed ? 'committed' : 'uncommitted'))
-    .append($('<rect />')
+    .append(SVG('rect')
       .attr(spec)
       .attr('stroke-dasharray', committed ? '1 0' : '5 5')
       .attr('style', 'fill: ' + termColors[entry.term % termColors.length]))
-    .append($('<text />')
+    .append(SVG('text')
       .attr({x: spec.x + spec.width / 2,
              y: spec.y + spec.height / 2})
       .text(entry.term));
@@ -318,7 +324,7 @@ render.logs = function() {
   let logsGroup = $('#logsGroup', svg);
   logsGroup.empty();
   logsGroup.append(
-    $('<rect />')
+    SVG('rect')
       .attr('id', 'logs')
       .attr(logsSpec));
   let height = (logsSpec.height - INDEX_HEIGHT) / NUM_SERVERS;
@@ -337,7 +343,7 @@ render.logs = function() {
       height: indexSpec.height,
     };
     logsGroup
-        .append($('<text />')
+        .append(SVG('text')
           .attr(indexEntrySpec)
           .text(index));
   }
@@ -357,14 +363,14 @@ render.logs = function() {
       };
     };
     logsGroup.append(
-        $('<text />')
+        SVG('text')
           .text('S' + server.id)
           .attr('class', 'serverid ' + server.state)
           .attr({x: logSpec.x - LABEL_WIDTH*4/5,
                  y: logSpec.y + logSpec.height / 2}));
     for (let index = 1; index <= 10; ++index) {
       logsGroup
-        .append($('<rect />')
+        .append(SVG('rect')
           .attr(logEntrySpec(index))
           .attr('class', 'log'))
     }
@@ -377,19 +383,18 @@ render.logs = function() {
     });
     if (leader !== null && leader != server) {
       logsGroup.append(
-        $('<circle />')
+        SVG('circle')
           .attr({cx: logEntrySpec(leader.matchIndex[server.id] + 1).x,
                  cy: logSpec.y + logSpec.height,
                  r: 5}));
       var x = logEntrySpec(leader.nextIndex[server.id] + 0.5).x;
-      logsGroup.append($('<path />')
+      logsGroup.append(SVG('path')
         .attr('style', 'marker-end:url(#TriangleOutM); stroke: black')
         .attr('d', ['M', x, comma, logSpec.y + logSpec.height + logSpec.height/3,
                     'L', x, comma, logSpec.y + logSpec.height + logSpec.height/6].join(' '))
         .attr('stroke-width', 3));
     }
   });
-  util.reparseSVG(logsGroup);
 };
 
 render.messages = function(messagesSame) {
@@ -398,14 +403,13 @@ render.messages = function(messagesSame) {
     messagesGroup.empty();
     model.messages.forEach(function(message, i) {
       messagesGroup.append(
-        $('<a xlink:href="#"></a>')
+        SVG('a')
           .attr('id', 'message-' + i)
           .attr('class', 'message ' + message.direction + ' ' + message.type)
-          .append($('<circle />'))
-          .append($('<path class="message-success" />'))
-          .append($('<path class="message-direction" />')));
+          .append(SVG('circle'))
+          .append(SVG('path').attr('class', 'message-success'))
+          .append(SVG('path').attr('class', 'message-direction')));
     });
-    util.reparseSVG(messagesGroup);
     model.messages.forEach(function(message, i) {
       let messageNode = $('a#message-' + i, svg);
       messageNode

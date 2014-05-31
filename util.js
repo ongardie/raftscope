@@ -40,10 +40,6 @@ util.mapValues = function(m) {
   return $.map(m, function(v) { return v; });
 };
 
-util.reparseSVG = function(node) {
-  node.html(node.html()); // reparse as SVG after adding nodes
-};
-
 util.clone = function(object) {
   return jQuery.extend(true, {}, object);
 };

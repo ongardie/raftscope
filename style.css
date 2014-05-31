@@ -25,6 +25,10 @@ textarea#title {
  margin-top: 10px;
 }
 
+svg a:hover {
+  cursor: pointer;
+}
+
 svg #ring, svg #logs {
   fill: #eeeeee;
 }
