@@ -14,6 +14,11 @@ util.value = function(v) {
   return function() { return v; };
 };
 
+// Use with sort for numbers.
+util.numericCompare = function(a, b) {
+  return a - b;
+};
+
 util.circleCoord = function(frac, cx, cy, r) {
   var radians = 2 * Math.PI * (0.75 + frac);
   return {

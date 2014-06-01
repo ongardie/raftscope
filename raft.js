@@ -144,7 +144,7 @@ rules.sendAppendEntries = function(model, server, peer) {
 
 rules.advanceCommitIndex = function(model, server) {
   var matchIndexes = util.mapValues(server.matchIndex).concat(server.log.length);
-  matchIndexes.sort();
+  matchIndexes.sort(util.numericCompare);
   var n = matchIndexes[Math.floor(NUM_SERVERS / 2)];
   if (server.state == 'leader' &&
       logTerm(server.log, n) == server.term) {
@@ -324,7 +324,7 @@ raft.spreadTimers = function(model) {
       timers.push(server.electionAlarm);
     }
   });
-  timers.sort();
+  timers.sort(util.numericCompare);
   if (timers.length > 1 &&
       timers[1] - timers[0] < MAX_RPC_LATENCY) {
     if (timers[0] > model.time + MAX_RPC_LATENCY) {
@@ -355,7 +355,7 @@ raft.alignTimers = function(model) {
       timers.push(server.electionAlarm);
     }
   });
-  timers.sort();
+  timers.sort(util.numericCompare);
   model.servers.forEach(function(server) {
     if (server.electionAlarm == timers[1]) {
       server.electionAlarm = timers[0];
