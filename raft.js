@@ -72,7 +72,7 @@ var stepDown = function(model, server, term) {
   server.term = term;
   server.state = 'follower';
   server.votedFor = null;
-  if (server.electionAlarm < model.time || server.electionAlarm == Infinity) {
+  if (server.electionAlarm < model.time || server.electionAlarm == util.Inf) {
     server.electionAlarm = makeElectionAlarm(model.time);
   }
 };
@@ -112,9 +112,9 @@ rules.becomeLeader = function(model, server) {
     //console.log('server ' + server.id + ' is leader in term ' + server.term);
     server.state = 'leader';
     server.nextIndex    = util.makeMap(server.peers, server.log.length + 1);
-    server.rpcDue       = util.makeMap(server.peers, Infinity);
+    server.rpcDue       = util.makeMap(server.peers, util.Inf);
     server.heartbeatDue = util.makeMap(server.peers, 0);
-    server.electionAlarm = Infinity;
+    server.electionAlarm = util.Inf;
   }
 };
 
@@ -177,7 +177,7 @@ var handleRequestVoteReply = function(model, server, reply) {
     stepDown(model, server, reply.term);
   if (server.state == 'candidate' &&
       server.term == reply.term) {
-    server.rpcDue[reply.from] = Infinity;
+    server.rpcDue[reply.from] = util.Inf;
     server.voteGranted[reply.from] = reply.granted;
   }
 };
@@ -263,7 +263,7 @@ raft.update = function(model) {
   model.messages.forEach(function(message) {
     if (message.recvTime <= model.time)
       deliver.push(message);
-    else if (message.recvTime < Infinity)
+    else if (message.recvTime < util.Inf)
       keep.push(message);
   });
   model.messages = keep;
@@ -320,7 +320,7 @@ raft.spreadTimers = function(model) {
   var timers = [];
   model.servers.forEach(function(server) {
     if (server.electionAlarm > model.time &&
-        server.electionAlarm < Infinity) {
+        server.electionAlarm < util.Inf) {
       timers.push(server.electionAlarm);
     }
   });
@@ -351,7 +351,7 @@ raft.alignTimers = function(model) {
   var timers = [];
   model.servers.forEach(function(server) {
     if (server.electionAlarm > model.time &&
-        server.electionAlarm < Infinity) {
+        server.electionAlarm < util.Inf) {
       timers.push(server.electionAlarm);
     }
   });

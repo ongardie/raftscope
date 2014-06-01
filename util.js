@@ -6,6 +6,10 @@
 
 var util = {};
 
+// Really big number. Infinity is problematic because
+// JSON.stringify(Infinity) returns 'null'.
+util.Inf = 1e300;
+
 util.value = function(v) {
   return function() { return v; };
 };

@@ -12,10 +12,22 @@
 var playback;
 var render = {};
 var state;
+var record;
+var replay;
 
 $(function() {
 
 var ARC_WIDTH = 5;
+
+var onReplayDone = undefined;
+record = function(name) {
+  localStorage.setItem(name, state.exportToString());
+};
+replay = function(name, done) {
+  state.importFromString(localStorage.getItem(name));
+  render.update();
+  onReplayDone = done;
+};
 
 state = makeState({
   servers: [],
@@ -460,7 +472,7 @@ render.messages = function(messagesSame) {
 };
 
 var relTime = function(time, now) {
-  if (time == Infinity)
+  if (time == util.Inf)
     return 'infinity';
   var sign = time > now ? '+' : '';
   return sign + ((time - now) / 1e3).toFixed(3) + 'ms';
@@ -615,6 +627,11 @@ render.update = function() {
       var modelMicrosElapsed = wallMicrosElapsed / speed;
       var modelMicros = state.current.time + modelMicrosElapsed;
       state.seek(modelMicros);
+      if (modelMicros >= state.getMaxTime() && onReplayDone !== undefined) {
+        var f = onReplayDone;
+        onReplayDone = undefined;
+        f();
+      }
       render.update();
     }
     last = timestamp;

@@ -14,7 +14,6 @@ var makeState = function(initial) {
   };
   var self = {
     current: initial,
-    _checkpoints: checkpoints,
     getMaxTime: function() {
       return maxTime;
     },
@@ -51,6 +50,25 @@ var makeState = function(initial) {
       }
     },
     updater: function() { return false; },
+    exportToString: function() {
+      return JSON.stringify({
+        checkpoints: checkpoints,
+        maxTime: maxTime,
+      });
+    },
+    importFromString: function(s) {
+      var o = JSON.parse(s);
+      checkpoints = o.checkpoints
+      maxTime = o.maxTime;
+      self.current = util.clone(checkpoints[0]);
+      self.current.time = 0;
+    },
+    clear: function() {
+      checkpoints = [];
+      self.current = initial;
+      self.current.time = 0;
+      maxTime = 0;
+    },
   };
   self.current.time = 0;
   return self;
