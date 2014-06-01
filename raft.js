@@ -45,6 +45,7 @@ var logTerm = function(log, index) {
 };
 
 var rules = {};
+raft.rules = rules;
 
 var makeElectionAlarm = function(now) {
   return now + (Math.random() + 1) * ELECTION_TIMEOUT;
@@ -72,14 +73,14 @@ var stepDown = function(model, server, term) {
   server.term = term;
   server.state = 'follower';
   server.votedFor = null;
-  if (server.electionAlarm < model.time || server.electionAlarm == util.Inf) {
+  if (server.electionAlarm <= model.time || server.electionAlarm == util.Inf) {
     server.electionAlarm = makeElectionAlarm(model.time);
   }
 };
 
 rules.startNewElection = function(model, server) {
   if ((server.state == 'follower' || server.state == 'candidate') &&
-      server.electionAlarm < model.time) {
+      server.electionAlarm <= model.time) {
     server.electionAlarm = makeElectionAlarm(model.time);
     server.term += 1;
     server.votedFor = server.id;
@@ -94,7 +95,7 @@ rules.startNewElection = function(model, server) {
 
 rules.sendRequestVote = function(model, server, peer) {
   if (server.state == 'candidate' &&
-      server.rpcDue[peer] < model.time) {
+      server.rpcDue[peer] <= model.time) {
     server.rpcDue[peer] = model.time + RPC_TIMEOUT;
     sendRequest(model, {
       from: server.id,
@@ -120,9 +121,9 @@ rules.becomeLeader = function(model, server) {
 
 rules.sendAppendEntries = function(model, server, peer) {
   if (server.state == 'leader' &&
-      (server.heartbeatDue[peer] < model.time ||
+      (server.heartbeatDue[peer] <= model.time ||
        (server.nextIndex[peer] <= server.log.length &&
-        server.rpcDue[peer] < model.time))) {
+        server.rpcDue[peer] <= model.time))) {
     var prevIndex = server.nextIndex[peer] - 1;
     var lastIndex = Math.min(prevIndex + BATCH_SIZE,
                              server.log.length);
