@@ -646,6 +646,7 @@ $(window).keyup(function(e) {
   var leader = getLeader();
   if (e.keyCode == ' '.charCodeAt(0) ||
       e.keyCode == 190 /* dot, emitted by Logitech remote */) {
+    $('.modal').modal('hide');
     playback.toggle();
   } else if (e.keyCode == 'C'.charCodeAt(0)) {
     if (leader !== null) {
@@ -653,6 +654,7 @@ $(window).keyup(function(e) {
       raft.clientRequest(state.current, leader);
       state.save();
       render.update();
+      $('.modal').modal('hide');
     }
   } else if (e.keyCode == 'R'.charCodeAt(0)) {
     if (leader !== null) {
@@ -661,34 +663,40 @@ $(window).keyup(function(e) {
       raft.resume(state.current, leader);
       state.save();
       render.update();
+      $('.modal').modal('hide');
     }
   } else if (e.keyCode == 'T'.charCodeAt(0)) {
     state.fork();
     raft.spreadTimers(state.current);
     state.save();
     render.update();
+    $('.modal').modal('hide');
   } else if (e.keyCode == 'A'.charCodeAt(0)) {
     state.fork();
     raft.alignTimers(state.current);
     state.save();
     render.update();
+    $('.modal').modal('hide');
   } else if (e.keyCode == 'L'.charCodeAt(0)) {
     state.fork();
     playback.pause();
     raft.setupLogReplicationScenario(state.current);
     state.save();
     render.update();
+    $('.modal').modal('hide');
   } else if (e.keyCode == 'B'.charCodeAt(0)) {
     state.fork();
     raft.resumeAll(state.current);
     state.save();
     render.update();
+    $('.modal').modal('hide');
   } else if (e.keyCode == 'F'.charCodeAt(0)) {
     state.fork();
     render.update();
+    $('.modal').modal('hide');
   } else if (e.keyCode == 191 && e.shiftKey) { /* question mark */
     playback.pause();
-    $('#modal-help').modal();
+    $('#modal-help').modal('show');
   }
 });
 
