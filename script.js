@@ -56,6 +56,7 @@ playback = function() {
     $('#time-icon')
       .removeClass('glyphicon-time')
       .addClass('glyphicon-pause');
+    render.update();
   };
   var resume = function() {
     if (paused) {
@@ -63,6 +64,7 @@ playback = function() {
       $('#time-icon')
         .removeClass('glyphicon-pause')
         .addClass('glyphicon-time');
+      render.update();
     }
   };
   return {
@@ -377,13 +379,13 @@ render.logs = function() {
     if (leader !== null && leader != server) {
       log.append(
         SVG('circle')
-          .attr('title', 'match index').tooltip({container: 'body'})
+          .attr('title', 'match index')//.tooltip({container: 'body'})
           .attr({cx: logEntrySpec(leader.matchIndex[server.id] + 1).x,
                  cy: logSpec.y + logSpec.height,
                  r: 5}));
       var x = logEntrySpec(leader.nextIndex[server.id] + 0.5).x;
       log.append(SVG('path')
-        .attr('title', 'next index').tooltip({container: 'body'})
+        .attr('title', 'next index')//.tooltip({container: 'body'})
         .attr('style', 'marker-end:url(#TriangleOutM); stroke: black')
         .attr('d', ['M', x, comma, logSpec.y + logSpec.height + logSpec.height/3,
                     'L', x, comma, logSpec.y + logSpec.height + logSpec.height/6].join(' '))
@@ -400,7 +402,7 @@ render.messages = function(messagesSame) {
       var a = SVG('a')
           .attr('id', 'message-' + i)
           .attr('class', 'message ' + message.direction + ' ' + message.type)
-          .attr('title', message.type + ' ' + message.direction).tooltip({container: 'body'})
+          .attr('title', message.type + ' ' + message.direction)//.tooltip({container: 'body'})
           .append(SVG('circle'))
           .append(SVG('path').attr('class', 'message-direction'));
       if (message.direction == 'reply')
@@ -750,8 +752,9 @@ $('#time-button')
     return false;
   });
 
-// enable tooltips
-$('[data-toggle="tooltip"]').tooltip();
+// Disabled for now, they don't seem to behave reliably.
+// // enable tooltips
+// $('[data-toggle="tooltip"]').tooltip();
 
 state.updater = function(state) {
   raft.update(state.current);
