@@ -739,7 +739,11 @@ timeSlider.on('slideStart', function() {
   sliding = true;
 });
 timeSlider.on('slideStop', function() {
+  // If you click rather than drag,  there won't be any slide events, so you
+  // have to seek and update here too.
+  state.seek(timeSlider.slider('getValue'));
   sliding = false;
+  render.update();
 });
 timeSlider.on('slide', function() {
   state.seek(timeSlider.slider('getValue'));
