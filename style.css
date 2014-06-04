@@ -55,7 +55,7 @@ svg .server.leader text.serverid {
   fill: red;
 }
 
-svg #logs text.serverid.leader {
+svg .logs text.serverid.leader {
   fill: red;
 }
 
@@ -106,7 +106,7 @@ svg .message.reply circle {
   fill-opacity: 0;
 }
 
-svg #logs text {
+svg .logs text {
   text-anchor: middle;
   dominant-baseline: central;
   text-align: center;

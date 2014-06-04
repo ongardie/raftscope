@@ -311,7 +311,7 @@ render.entry = function(spec, entry, committed) {
 render.logs = function() {
   var LABEL_WIDTH = 25;
   var INDEX_HEIGHT = 25;
-  var logsGroup = $('#logs', svg);
+  var logsGroup = $('.logs', svg);
   logsGroup.empty();
   logsGroup.append(
     SVG('rect')
