@@ -14,14 +14,18 @@ var makeState = function(initial) {
                                 function(m) { return m.time > time; });
   };
   var runTimers = function(time) {
-      timers = timers.filter(function(timer) {
-        if (timer.time <= time) {
-          timer.callback();
-          return false;
-        } else {
-          return true;
-        }
-      });
+    var fire = [];
+    timers = timers.filter(function(timer) {
+      if (timer.time <= time) {
+        fire.push(timer);
+        return false;
+      } else {
+        return true;
+      }
+    });
+    fire.forEach(function(timer) {
+      timer.callback();
+    });
   };
   var self = {
     current: initial,
