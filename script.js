@@ -56,6 +56,7 @@ playback = function() {
     $('#time-icon')
       .removeClass('glyphicon-time')
       .addClass('glyphicon-pause');
+    $('#pause').attr('class', 'paused');
     render.update();
   };
   var resume = function() {
@@ -64,6 +65,7 @@ playback = function() {
       $('#time-icon')
         .removeClass('glyphicon-pause')
         .addClass('glyphicon-time');
+      $('#pause').attr('class', 'resumed');
       render.update();
     }
   };
@@ -100,6 +102,9 @@ var ringSpec = {
   cy: 210,
   r: 150,
 };
+$('#pause').attr('transform',
+  'translate(' + ringSpec.cx + ', ' + ringSpec.cy + ') ' +
+  'scale(' + ringSpec.r / 3.5 + ')');
 
 var logsSpec = {
   x: 430,

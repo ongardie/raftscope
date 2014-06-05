@@ -135,6 +135,14 @@ svg .entry text {
   text-align: center;
 }
 
+svg #pause.paused {
+  fill:white;
+}
+
+svg #pause.resumed {
+  fill:none;
+}
+
 @media (min-width: 768px) {
   #modal-details .modal-body .dl-horizontal dt {
     width: 100px;
