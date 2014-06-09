@@ -164,3 +164,77 @@ a#time-button  {
   color: inherit;
 }
 
+.slide {
+  height: 500px;
+}
+
+.slide p {
+  font-size: 16pt;
+}
+
+.slide .modal-header {
+  padding: 5px 15px;
+}
+
+.slide ol {
+  font-weight: bold;
+  color: #428bca;
+}
+
+
+.slide ul {
+  font-size:20pt;
+  font-weight: bold;
+  line-height: 16pt;
+  color: #428bca;
+}
+
+.slide li p {
+  font-weight: normal;
+  font-size:16pt;
+  color: #333;
+  line-height: 1.4;
+}
+
+.slide blockquote p::before {
+  content: "\201C";
+  font-weight: bold;
+  font-size: 18pt;
+  line-height: 14pt;
+  margin-right: 2px;
+}
+.slide blockquote p::after {
+  content: "\201D";
+  font-weight: bold;
+  font-size: 18pt;
+  line-height: 14pt;
+}
+
+.slide blockquote {
+  padding: 0;
+  padding-left: 20px;
+  border: none;
+  margin-bottom: 15px;
+}
+
+.slide blockquote p {
+  line-height: 1.1;
+  font-size: 14pt;
+  font-style: italic;
+  color: #555;
+  margin-bottom: 2px;
+}
+
+.slide h1,
+.slide h2,
+.slide h3,
+.slide h4,
+.slide h5,
+.slide h6,
+.blue {
+  color: #428bca;
+}
+
+.slide .gray {
+  color: #333;
+}
