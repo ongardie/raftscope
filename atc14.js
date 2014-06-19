@@ -36,7 +36,7 @@ safetys = function() {
   svg.append(logsg);
 
   var logs = [
-    [2, 2, 2, 3, 3, 4],
+    [2, 2, 2, 3, 4],
     [2, 2, 2, 3, 3, 3],
     [2, 2, 2, 3],
   ].map(function(l) {
@@ -99,12 +99,18 @@ safetys = function() {
           .attr(logEntrySpec(index))
           .attr('class', 'log'));
     }
+
+    var renderEntry = function(spec, entry) {
+      var e = render.entry(spec, entry, true);
+      var rect = $('rect', e);
+      rect.attr('style', rect.attr('style') + '; stroke-width: .5');
+      return e;
+    };
     log.forEach(function(entry, i) {
       var index = i + 1;
-        logg.append(render.entry(
+      logg.append(renderEntry(
              logEntrySpec(index),
-             entry,
-             false));
+             entry));
     });
   });
 
@@ -267,18 +273,21 @@ slides = function() {/*
               <li><p>Consensus widely regarded as difficult</p></li>
               <li><p>Raft designed for understandability</p>
                 <ul>
+                  <!--
                   <li><p>Better problem decomposition</p></li>
                   <li><p>Reduced state space complexity, less mechanism</p></li>
+                  -->
+                  <li><p>Easier to teach in classrooms</p></li>
+                  <li><p>Better foundation for building practical systems</p></li>
                 </ul>
               </li>
-              <li><p>Easier to teach in classrooms</p></li>
-              <li><p>Better foundation for building practical systems</p></li>
               <li><p>Additional topics:</p>
                 <ul>
                   <li><p>Cluster membership changes (paper)</p></li>
                   <li><p>Log compaction and client interaction (TR)</p></li>
                 </ul>
               </li>
+              <li><p>http://raftconsensus.github.io</p></li>
             </ul>
           </div>
         </div>
