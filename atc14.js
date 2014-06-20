@@ -197,23 +197,30 @@ slides = function() {/*
           </div>
           <div class="modal-body">
             <ul>
-              <li><p>Consensus: agreement on shared state</p>
-                <ul>
-                  <li><p>System is up if majority of servers are up</p></li>
-                  <li><p>Needed for consistent, fault-tolerant storage systems</p></li>
-                </ul>
-              </li>
-              <li><p>Paxos widely regarded as difficult</p>
-                <blockquote>
-                  <p>The dirty little secret of the NSDI community is that at most five people really, truly understand every part of Paxos ;-).</p>
-                  <footer>NSDI reviewer</footer>
-                </blockquote>
-                <blockquote>
-                  <p>There are significant gaps between the description of the Paxos algorithm and the needs of a real-world system.&hellip; the final system will be based on an unproven protocol.</p>
-                  <footer>Chubby authors</footer>
-                </blockquote>
-              </li>
+              <li><p>Consensus: agreement on shared state</p></li>
+              <li><p>System is up if majority of servers are up</p></li>
+              <li><p>Needed for consistent, fault-tolerant storage systems</p></li>
             </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content slide">
+          <div class="modal-header">
+            <h2>Paxos widely regarded as difficult</h2>
+          </div>
+          <div class="modal-body">
+            <blockquote>
+              <p>The dirty little secret of the NSDI community is that at most five people really, truly understand every part of Paxos ;-).</p>
+              <footer>NSDI reviewer</footer>
+            </blockquote>
+            <blockquote>
+              <p>There are significant gaps between the description of the Paxos algorithm and the needs of a real-world system.&hellip; the final system will be based on an unproven protocol.</p>
+              <footer>Chubby authors</footer>
+            </blockquote>
           </div>
         </div>
       </div>
