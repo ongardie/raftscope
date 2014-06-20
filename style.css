@@ -112,6 +112,10 @@ svg .logs text {
   text-align: center;
 }
 
+svg .logs .key text {
+  text-anchor: initial;
+}
+
 svg .log {
   fill: none;
   stroke: gray;

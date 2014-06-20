@@ -141,6 +141,7 @@ leaderElection = function() {
 };
 
 logReplication = function() {
+  $('.logs').show();
   heading('Log Replication');
   replay('log replication', playback.pause);
   state.schedule(     1, playback.pause);
@@ -328,5 +329,7 @@ $(window).keyup(function(e) {
     showSlide(slideIndex);
   }
 });
+
+$('.logs').hide();
 
 });

@@ -108,7 +108,7 @@ $('#pause').attr('transform',
 
 var logsSpec = {
   x: 430,
-  y: 50,
+  y: 20,
   width: 320,
   height: 270,
 };
@@ -317,12 +317,15 @@ render.logs = function() {
   var LABEL_WIDTH = 25;
   var INDEX_HEIGHT = 25;
   var logsGroup = $('.logs', svg);
+  var height = (logsSpec.height - INDEX_HEIGHT) / NUM_SERVERS;
   logsGroup.empty();
   logsGroup.append(
     SVG('rect')
       .attr('id', 'logsbg')
-      .attr(logsSpec));
-  var height = (logsSpec.height - INDEX_HEIGHT) / NUM_SERVERS;
+      .attr(logsSpec)
+      .attr('height', logsSpec.height + height * 1.9));
+  var key = SVG('g').attr('class', 'key');
+  logsGroup.append(key);
   var leader = getLeader();
   var indexSpec = {
     x: logsSpec.x + LABEL_WIDTH + logsSpec.width * 0.05,
@@ -397,6 +400,24 @@ render.logs = function() {
         .attr('stroke-width', 3));
     }
   });
+
+  key.append(SVG('path')
+    .attr('style', 'marker-end:url(#TriangleOutM); stroke: black')
+    .attr('d', ['M', logsSpec.x + 6 * LABEL_WIDTH, comma, logsSpec.y + logsSpec.height + .6*height + 2*height/3/3,
+                'L', logsSpec.x + 6 * LABEL_WIDTH, comma, logsSpec.y + logsSpec.height + .6*height + 2*height/3/6].join(' '))
+    .attr('stroke-width', 3));
+  key.append(SVG('text')
+    .attr({x: logsSpec.x + 6 * LABEL_WIDTH + .7 * LABEL_WIDTH,
+           y: logsSpec.y + logsSpec.height + .7*height})
+    .text('= next index'));
+  key.append(SVG('circle')
+    .attr({cx: logsSpec.x + 6 * LABEL_WIDTH,
+           cy: logsSpec.y + logsSpec.height + 1.4*height,
+           r: 5}));
+  key.append(SVG('text')
+    .attr({x: logsSpec.x + 6 * LABEL_WIDTH + .7 * LABEL_WIDTH,
+           y: logsSpec.y + logsSpec.height + 1.4*height})
+    .text('= match index'));
 };
 
 render.messages = function(messagesSame) {
