@@ -316,9 +316,9 @@ showSlide = function(num) {
 
 var slideIndex = 0;
 
-playback.pause();
+//playback.pause();
 setTimeout(leaderElection, 0);
-showSlide(0);
+//showSlide(0);
 
 $(window).keyup(function(e) {
   if (e.keyCode == 33) { // pgup
