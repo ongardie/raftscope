@@ -673,7 +673,8 @@ $(window).keyup(function(e) {
     return;
   var leader = getLeader();
   if (e.keyCode == ' '.charCodeAt(0) ||
-      e.keyCode == 190 /* dot, emitted by Logitech remote */) {
+      e.keyCode == 34 /* next, emitted by Logitech remote */ ||
+      e.keyCode == 190 /* dot */) {
     $('.modal').modal('hide');
     playback.toggle();
   } else if (e.keyCode == 'C'.charCodeAt(0)) {

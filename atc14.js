@@ -320,6 +320,7 @@ var slideIndex = 0;
 setTimeout(leaderElection, 0);
 //showSlide(0);
 
+/*
 $(window).keyup(function(e) {
   if (e.keyCode == 33) { // pgup
     slideIndex = Math.max(slideIndex - 1, 0);
@@ -329,6 +330,7 @@ $(window).keyup(function(e) {
     showSlide(slideIndex);
   }
 });
+*/
 
 $('.logs').hide();
 
