@@ -157,6 +157,7 @@ logReplication = function() {
     playback.pause();
   });
   state.schedule(413000, playback.pause);
+  state.schedule(567000, playback.pause);
   state.schedule(568000, function () {
     state.seek(647000);
   });
