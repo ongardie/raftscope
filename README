@@ -1,3 +1,8 @@
 super hacky visualization of raft, inspired by thesecretlivesofdata
 
 also makes for a good space heater while your browser continuously re-parses and re-renders svg
+
+
+
+after you clone, run the following to get the dependencies:
+    git submodule update --init --recursive
