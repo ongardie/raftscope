@@ -727,7 +727,7 @@ var getLeader = function() {
 $("#speed").slider({
   tooltip: 'always',
   formater: function(value) {
-    return sliderTransform(value).toFixed(0) + 'x';
+    return '1/' + sliderTransform(value).toFixed(0) + 'x';
   },
   reversed: true,
 });
