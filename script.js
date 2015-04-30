@@ -595,12 +595,12 @@ messageModal = function(model, message) {
   m.modal();
 };
 
-var sliderTransform = function(v) {
-  v = Math.pow(v, 3) + 100;
+// Transforms the simulation speed from a linear slider
+// to a logarithmically scaling time factor.
+var speedSliderTransform = function(v) {
+  v = Math.pow(2, v);
   if (v < 1)
     return 1;
-  else if (v > 1000)
-    return 1000;
   else
     return v;
 };
@@ -630,7 +630,7 @@ render.update = function() {
   var step = function(timestamp) {
     if (!playback.isPaused() && last !== null && timestamp - last < 500) {
       var wallMicrosElapsed = (timestamp - last) * 1000;
-      var speed = sliderTransform($('#speed').slider('getValue'));
+      var speed = speedSliderTransform($('#speed').slider('getValue'));
       var modelMicrosElapsed = wallMicrosElapsed / speed;
       var modelMicros = state.current.time + modelMicrosElapsed;
       state.seek(modelMicros);
@@ -727,7 +727,7 @@ var getLeader = function() {
 $("#speed").slider({
   tooltip: 'always',
   formater: function(value) {
-    return '1/' + sliderTransform(value).toFixed(0) + 'x';
+    return '1/' + speedSliderTransform(value).toFixed(0) + 'x';
   },
   reversed: true,
 });
