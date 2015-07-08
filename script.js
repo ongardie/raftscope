@@ -598,7 +598,7 @@ messageModal = function(model, message) {
 // Transforms the simulation speed from a linear slider
 // to a logarithmically scaling time factor.
 var speedSliderTransform = function(v) {
-  v = Math.pow(2, v);
+  v = Math.pow(10, v);
   if (v < 1)
     return 1;
   else
