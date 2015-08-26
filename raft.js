@@ -191,7 +191,7 @@ var handleAppendEntriesRequest = function(model, server, request) {
   if (server.term == request.term) {
     server.state = 'follower';
     server.electionAlarm = makeElectionAlarm(model.time);
-    if (request.prevLogIndex === 0 ||
+    if (request.prevIndex === 0 ||
         (request.prevIndex <= server.log.length &&
          logTerm(server.log, request.prevIndex) == request.prevTerm)) {
       success = true;
