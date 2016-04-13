@@ -147,8 +147,7 @@ rules.advanceCommitIndex = function(model, server) {
   var matchIndexes = util.mapValues(server.matchIndex).concat(server.log.length);
   matchIndexes.sort(util.numericCompare);
   var n = matchIndexes[Math.floor(NUM_SERVERS / 2)];
-  if (server.state == 'leader' &&
-      logTerm(server.log, n) == server.term) {
+  if (server.state == 'leader') {
     server.commitIndex = Math.max(server.commitIndex, n);
   }
 };
