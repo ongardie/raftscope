@@ -60,7 +60,7 @@ raft.server = function(id, peers) {
     votedFor: null,
     log: [],
     commitIndex: 0,
-    electionAlarm: makeElectionAlarm(0),
+    electionAlarm: makeElectionAlarm(state.current.time),
     voteGranted:  util.makeMap(peers, false),
     matchIndex:   util.makeMap(peers, 0),
     nextIndex:    util.makeMap(peers, 1),
