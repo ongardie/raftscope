@@ -130,30 +130,41 @@ $(function() {
     var serverModal;
     var messageModal;
 
-    state.current.servers.forEach(function (server) {
+    // TODO: move to appropriate location
+    var server_render = function (server) {
         var s = serverSpec(server.id);
         $('#servers', svg).append(
             SVG('g')
-                .attr('id', 'server-' + server.id)
-                .attr('class', 'server')
-                .append(SVG('text')
-                    .attr('class', 'serverid')
-                    .text('S' + server.id)
-                    .attr(util.circleCoord((server.id - 1) / NUM_SERVERS,
-                        ringSpec.cx, ringSpec.cy, ringSpec.r + 50)))
+            .attr('id', 'server-' + server.id)
+            .attr('class', 'server')
+            .append(SVG('text')
+                .attr('class', 'serverid')
+                .text('S' + server.id)
+                .attr(util.circleCoord((server.id - 1) / NUM_SERVERS,
+                      ringSpec.cx, ringSpec.cy, ringSpec.r + 50)))
                 .append(SVG('a')
-                    .append(SVG('circle')
-                        .attr('class', 'background')
-                        .attr(s))
-                    .append(SVG('g')
-                        .attr('class', 'votes'))
-                    .append(SVG('path')
-                        .attr('style', 'stroke-width: ' + ARC_WIDTH))
-                    .append(SVG('text')
-                        .attr('class', 'term')
-                        .attr({x: s.cx, y: s.cy}))
+                .append(SVG('circle')
+                    .attr('class', 'background')
+                    .attr(s))
+                .append(SVG('g')
+                    .attr('class', 'votes'))
+                .append(SVG('path')
+                    .attr('style', 'stroke-width: ' + ARC_WIDTH))
+                .append(SVG('text')
+                    .attr('class', 'term')
+                    .attr({x: s.cx, y: s.cy}))
                 ));
-    });
+    };
+
+    var server_redistribuite = function (server) {
+        var s = serverSpec(server.id);
+        $('#server-'+server.id+' .serverid').attr(util.circleCoord((server.id - 1) / NUM_SERVERS,
+                    ringSpec.cx, ringSpec.cy, ringSpec.r + 50));
+        $('#server-'+server.id+' a .term').attr({x: s.cx, y: s.cy});
+        $('#server-'+server.id+' a circle').attr({cx: s.cx, cy: s.cy});
+    };
+
+    state.current.servers.forEach(server_render);
 
     var MESSAGE_RADIUS = 8;
 
@@ -541,6 +552,7 @@ $(function() {
             footer.append(button(action[0])
                 .click(function () {
                     state.fork();
+                    // action[1] == callback
                     action[1](model, server);
                     state.save();
                     render.update();
@@ -785,48 +797,40 @@ $(function() {
     state.init();
     render.update();
 
-    $(document).ready(function () {
-        $("#add-server").click(function () {
-            var new_id = NUM_SERVERS + 1;
-            var peers = [];
-            for (var j = 1; j <= NUM_SERVERS; j += 1) {
-                peers.push(j);
-                state.current.servers[j-1].peers.push(new_id);
-            }
-            NUM_SERVERS++;
+// -----------------------------------------------------------------------------
+// Our contribution
+// -----------------------------------------------------------------------------
 
-            state.current.servers.forEach(function (server) {
-                var s = serverSpec(server.id);
-                server.peers.push(new_id);
-                $('#server-'+server.id+' .serverid').attr(util.circleCoord((server.id - 1) / NUM_SERVERS,
-                    ringSpec.cx, ringSpec.cy, ringSpec.r + 50));
-                $('#server-'+server.id+' a .term').attr({x: s.cx, y: s.cy});
-                $('#server-'+server.id+' a circle').attr({cx: s.cx, cy: s.cy});
+    $("#add-server").click(function () {
+        state.fork();
+
+        // Really create new server
+        (function(){
+            NUM_SERVERS++; // enough for graphics.
+            var peers = state.current.servers.map(function(server) {
+                server.peers.push(NUM_SERVERS);
+                jQuery.extend(true, server, {
+                    'voteGranted':  {[NUM_SERVERS]: false},
+                    'matchIndex':   {[NUM_SERVERS]: 0},
+                    'nextIndex':    {[NUM_SERVERS]: 1},
+                    'rpcDue':       {[NUM_SERVERS]: 0},
+                    'heartbeatDue': {[NUM_SERVERS]: 0},
+                });
+
+                server_redistribuite(server);
+                return server.id;
             });
-            state.current.servers.push(raft.server(new_id, peers));
-            var s = serverSpec(new_id);
-            $('#servers', svg).append(
-                SVG('g')
-                    .attr('id', 'server-' + new_id)
-                    .attr('class', 'server')
-                    .append(SVG('text')
-                        .attr('class', 'serverid')
-                        .text('S' + new_id)
-                        .attr(util.circleCoord((new_id - 1) / NUM_SERVERS,
-                            ringSpec.cx, ringSpec.cy, ringSpec.r + 50)))
-                    .append(SVG('a')
-                        .append(SVG('circle')
-                            .attr('class', 'background')
-                            .attr(s))
-                        .append(SVG('g')
-                            .attr('class', 'votes'))
-                        .append(SVG('path')
-                            .attr('style', 'stroke-width: ' + ARC_WIDTH))
-                        .append(SVG('text')
-                            .attr('class', 'term')
-                            .attr({x: s.cx, y: s.cy}))
-                    ));
-        });
+            var nsrv = raft.server(NUM_SERVERS, peers);
+            state.current.servers.push(nsrv);
+            server_render(nsrv);
+            // server_redistribuite(server);
+
+        })();
+
+        // Save and display
+        state.save();
+        render.update();
+        return true;
     });
 });
 
