@@ -10,8 +10,8 @@ var RPC_TIMEOUT = 50000;
 var MIN_RPC_LATENCY = 10000;
 var MAX_RPC_LATENCY = 15000;
 var ELECTION_TIMEOUT = 100000;
-var NUM_SERVERS = 5;
 var BATCH_SIZE = 1;
+var NEXT_SERVER_ID = 1;
 
 (function() {
 
@@ -51,16 +51,29 @@ var makeElectionAlarm = function(now) {
   return now + (Math.random() + 1) * ELECTION_TIMEOUT;
 };
 
-raft.server = function(id, peers) {
+raft.server = function(model) {
+  var patch = {'voteGranted':{},'matchIndex':{},'nextIndex':{},'rpcDue':{},'heartbeatDue':{}};
+  patch.voteGranted[NEXT_SERVER_ID]  = false;
+  patch.matchIndex[NEXT_SERVER_ID]   = 0;
+  patch.nextIndex[NEXT_SERVER_ID]    = 1;
+  patch.rpcDue[NEXT_SERVER_ID]       = 0;
+  patch.heartbeatDue[NEXT_SERVER_ID] = 0;
+
+  var peers = model.servers.map(function(server) {
+      server.peers.push(NEXT_SERVER_ID);
+      jQuery.extend(true, server, patch);
+      return server.id;
+  });
+
   return {
-    id: id,
+    id: NEXT_SERVER_ID++,
     peers: peers,
     state: 'follower',
     term: 1,
     votedFor: null,
     log: [],
     commitIndex: 0,
-    electionAlarm: makeElectionAlarm(state.current.time),
+    electionAlarm: makeElectionAlarm(model.time),
     voteGranted:  util.makeMap(peers, false),
     matchIndex:   util.makeMap(peers, 0),
     nextIndex:    util.makeMap(peers, 1),
@@ -68,6 +81,7 @@ raft.server = function(id, peers) {
     heartbeatDue: util.makeMap(peers, 0),
   };
 };
+
 
 var stepDown = function(model, server, term) {
   server.term = term;
@@ -109,7 +123,7 @@ rules.sendRequestVote = function(model, server, peer) {
 
 rules.becomeLeader = function(model, server) {
   if (server.state == 'candidate' &&
-      util.countTrue(util.mapValues(server.voteGranted)) + 1 > Math.floor(NUM_SERVERS / 2)) {
+      util.countTrue(util.mapValues(server.voteGranted)) + 1 > Math.floor(model.servers.length / 2)) {
     //console.log('server ' + server.id + ' is leader in term ' + server.term);
     server.state = 'leader';
     server.nextIndex    = util.makeMap(server.peers, server.log.length + 1);
@@ -146,7 +160,7 @@ rules.sendAppendEntries = function(model, server, peer) {
 rules.advanceCommitIndex = function(model, server) {
   var matchIndexes = util.mapValues(server.matchIndex).concat(server.log.length);
   matchIndexes.sort(util.numericCompare);
-  var n = matchIndexes[Math.floor(NUM_SERVERS / 2)];
+  var n = matchIndexes[Math.floor(model.servers.length / 2)];
   if (server.state == 'leader' &&
       logTerm(server.log, n) == server.term) {
     server.commitIndex = Math.max(server.commitIndex, n);
@@ -365,6 +379,7 @@ raft.alignTimers = function(model) {
   });
 };
 
+// TODO: make me dynamic
 raft.setupLogReplicationScenario = function(model) {
   var s1 = model.servers[0];
   raft.restart(model, model.servers[1]);

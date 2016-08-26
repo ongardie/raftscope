@@ -37,6 +37,8 @@ var makeState = function(initial) {
     },
     fork: function() {
       var i = prev(self.current.time);
+      // NOTE: deleting forward history.
+      // TODO: save as tree
       while (checkpoints.length - 1 > i)
         checkpoints.pop();
       maxTime = self.current.time;

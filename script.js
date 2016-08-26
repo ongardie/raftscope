@@ -6,7 +6,7 @@
 /* global raft */
 /* global makeState */
 /* global ELECTION_TIMEOUT */
-/* global NUM_SERVERS */
+/* global SERVER_NEXT_ID */
 'use strict';
 
 var playback;
@@ -14,6 +14,8 @@ var render = {};
 var state;
 var record;
 var replay;
+
+var INITIAL_SERVER_NUMBER = 5;
 
 $(function() {
 
@@ -85,13 +87,8 @@ $(function() {
     }();
 
     (function () {
-        for (var i = 1; i <= NUM_SERVERS; i += 1) {
-            var peers = [];
-            for (var j = 1; j <= NUM_SERVERS; j += 1) {
-                if (i != j)
-                    peers.push(j);
-            }
-            state.current.servers.push(raft.server(i, peers));
+        for (var i = 1; i <= INITIAL_SERVER_NUMBER; i += 1) {
+            state.current.servers.push(raft.server(state.current));
         }
     })();
 
@@ -115,8 +112,9 @@ $(function() {
     };
 
 
-    var serverSpec = function (id) {
-        var coord = util.circleCoord((id - 1) / NUM_SERVERS,
+    var serverSpec = function (id, nservers) {
+        nservers = nservers !== undefined ?  nservers  : state.current.servers.length;
+        var coord = util.circleCoord((id - 1) / nservers,
             ringSpec.cx, ringSpec.cy, ringSpec.r);
         return {
             cx: coord.x,
@@ -130,41 +128,46 @@ $(function() {
     var serverModal;
     var messageModal;
 
-    // TODO: move to appropriate location
-    var server_render = function (server) {
-        var s = serverSpec(server.id);
-        $('#servers', svg).append(
-            SVG('g')
-            .attr('id', 'server-' + server.id)
-            .attr('class', 'server')
-            .append(SVG('text')
-                .attr('class', 'serverid')
-                .text('S' + server.id)
-                .attr(util.circleCoord((server.id - 1) / NUM_SERVERS,
-                      ringSpec.cx, ringSpec.cy, ringSpec.r + 50)))
-                .append(SVG('a')
-                .append(SVG('circle')
-                    .attr('class', 'background')
-                    .attr(s))
-                .append(SVG('g')
-                    .attr('class', 'votes'))
-                .append(SVG('path')
-                    .attr('style', 'stroke-width: ' + ARC_WIDTH))
+    var graphics = {};
+    graphics.get_creator = function(tot_srv) {
+        return function (server, idx) {
+            var s = serverSpec(server.id, tot_srv);
+            $('#servers', svg).append(
+                SVG('g')
+                .attr('id', 'server-' + server.id)
+                .attr('class', 'server')
                 .append(SVG('text')
-                    .attr('class', 'term')
-                    .attr({x: s.cx, y: s.cy}))
-                ));
+                    .attr('class', 'serverid')
+                    .text('S' + server.id)
+                    .attr(util.circleCoord(idx / tot_srv,
+                        ringSpec.cx, ringSpec.cy, ringSpec.r + 50)))
+                    .append(SVG('a')
+                    .append(SVG('circle')
+                        .attr('class', 'background')
+                        .attr(s))
+                    .append(SVG('g')
+                        .attr('class', 'votes'))
+                    .append(SVG('path')
+                        .attr('style', 'stroke-width: ' + ARC_WIDTH))
+                    .append(SVG('text')
+                        .attr('class', 'term')
+                        .attr({x: s.cx, y: s.cy}))
+                    ));
+        };
     };
 
-    var server_redistribuite = function (server) {
-        var s = serverSpec(server.id);
-        $('#server-'+server.id+' .serverid').attr(util.circleCoord((server.id - 1) / NUM_SERVERS,
-                    ringSpec.cx, ringSpec.cy, ringSpec.r + 50));
-        $('#server-'+server.id+' a .term').attr({x: s.cx, y: s.cy});
-        $('#server-'+server.id+' a circle').attr({cx: s.cx, cy: s.cy});
+    graphics.realign = function(tot_srv) {
+        return function (server, idx) {
+            var s = serverSpec(server.id, tot_srv);
+            $('#server-'+server.id+' .serverid').attr(
+                    util.circleCoord(idx / tot_srv,
+                        ringSpec.cx, ringSpec.cy, ringSpec.r + 50));
+            $('#server-'+server.id+' a .term').attr({x: s.cx, y: s.cy});
+            $('#server-'+server.id+' a circle').attr({cx: s.cx, cy: s.cy});
+        };
     };
 
-    state.current.servers.forEach(server_render);
+    state.current.servers.forEach(graphics.get_creator(state.current.servers.length));
 
     var MESSAGE_RADIUS = 8;
 
@@ -255,7 +258,7 @@ $(function() {
                 votesGroup.empty();
                 if (server.state == 'candidate') {
                     state.current.servers.forEach(function (peer) {
-                        var coord = util.circleCoord((peer.id - 1) / NUM_SERVERS,
+                        var coord = util.circleCoord((peer.id - 1) / this,
                             serverSpec(server.id).cx,
                             serverSpec(server.id).cy,
                             serverSpec(server.id).r * 5 / 8);
@@ -276,7 +279,7 @@ $(function() {
                                     r: 5,
                                 })
                                 .attr('class', state));
-                    });
+                    }, state.current.servers.length);
                 }
                 serverNode
                     .unbind('click')
@@ -336,7 +339,7 @@ $(function() {
             SVG('rect')
                 .attr('id', 'logsbg')
                 .attr(logsSpec));
-        var height = (logsSpec.height - INDEX_HEIGHT) / NUM_SERVERS;
+        var height = (logsSpec.height - INDEX_HEIGHT) / state.current.servers.length;
         var leader = getLeader();
         var indexSpec = {
             x: logsSpec.x + LABEL_WIDTH + logsSpec.width * 0.05,
@@ -806,25 +809,10 @@ $(function() {
 
         // Really create new server
         (function(){
-            NUM_SERVERS++; // enough for graphics.
-            var peers = state.current.servers.map(function(server) {
-                server.peers.push(NUM_SERVERS);
-                jQuery.extend(true, server, {
-                    'voteGranted':  {[NUM_SERVERS]: false},
-                    'matchIndex':   {[NUM_SERVERS]: 0},
-                    'nextIndex':    {[NUM_SERVERS]: 1},
-                    'rpcDue':       {[NUM_SERVERS]: 0},
-                    'heartbeatDue': {[NUM_SERVERS]: 0},
-                });
-
-                server_redistribuite(server);
-                return server.id;
-            });
-            var nsrv = raft.server(NUM_SERVERS, peers);
+            var nsrv = raft.server(state.current);
+            state.current.servers.forEach(graphics.realign(state.current.servers.length + 1));
             state.current.servers.push(nsrv);
-            server_render(nsrv);
-            // server_redistribuite(server);
-
+            graphics.get_creator(state.current.servers.length)(nsrv, state.current.servers.length - 1);
         })();
 
         // Save and display
