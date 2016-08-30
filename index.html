@@ -21,27 +21,28 @@
         <div class="container">
             <div class="row" style="margin-top: 20px">
                 <div class="col-sm-6">
-                    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="border: 0px solid black" width="745"
+                    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="745"
                          height="500">
                         <defs>
                             <marker id="TriangleOutM" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
-                                <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.4)"/>
+                                <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z"
+                                      transform="scale(0.4)"></path>
                             </marker>
                             <marker id="TriangleOutS-RequestVote" orient="auto" refX="0.0" refY="0.0"
                                     style="overflow:visible">
                                 <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)"
-                                      class="message RequestVote"/>
+                                      class="message RequestVote"></path>
                             </marker>
                             <marker id="TriangleOutS-AppendEntries" orient="auto" refX="0.0" refY="0.0"
                                     style="overflow:visible">
                                 <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)"
-                                      class="message AppendEntries"/>
+                                      class="message AppendEntries"></path>
                             </marker>
                         </defs>
-                        <circle id="ring"/>
+                        <circle id="ring"></circle>
                         <g id="pause" class="resumed">
-                            <rect width="1" height="3" x="-1.25" y="-1.5"/>
-                            <rect width="1" height="3" x=".25" y="-1.5"/>
+                            <rect width="1" height="3" x="-1.25" y="-1.5"></rect>
+                            <rect width="1" height="3" x=".25" y="-1.5"></rect>
                         </g>
                         <g id="messages"></g>
                         <g id="servers"></g>
@@ -60,15 +61,14 @@
             </div>
             <div class="row" style="margin-top: 20px">
                 <span id="speed-icon" class="glyphicon glyphicon-dashboard"
-                      style="font-size: 24pt; vertical-align: middle"
-                      data-toggle="tooltip" title="Simulation speed"></span>
+                      style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip"
+                      title="Simulation speed"></span>
                 &nbsp;&nbsp;
                 <input id="speed" style="width: 650px" data-slider-id='speedSlider' type="text" data-slider-min="0"
                        data-slider-max="3" data-slider-step=".01" data-slider-value="2"/>
             </div>
             <div class="row" style="margin-top: 20px">
-                <span id="channel-noise-icon" class="glyphicon glyphicon-flash"
-                      style="font-size: 24pt; vertical-align: middle"
+                <span id="channel-noise-icon" class="glyphicon flash" style="font-size: 24pt; vertical-align: middle"
                       data-toggle="tooltip" title="Channel noise"></span>
                 &nbsp;&nbsp;
                 <input id="channel-noise" style="width: 650px" data-slider-id='noiseSlider' type="text"

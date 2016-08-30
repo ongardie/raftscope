@@ -12,8 +12,6 @@
 var playback;
 var render = {};
 var state;
-var record;
-var replay;
 
 var INITIAL_SERVER_NUMBER = 5;
 var DISPLAY_MAX_LOG_ENTRIES = 10;
@@ -78,6 +76,7 @@ $(function () {
         };
     }();
 
+    // Initializes servers
     (function () {
         for (var i = 1; i <= INITIAL_SERVER_NUMBER; i += 1) {
             state.current.servers.push(raft.server(state.current));
@@ -102,7 +101,6 @@ $(function () {
         width: 320,
         height: 270,
     };
-
 
     var serverSpec = function (id, nservers) {
         nservers = nservers !== undefined ? nservers : state.current.servers.length;

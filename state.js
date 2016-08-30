@@ -62,6 +62,8 @@ var makeState = function (initial) {
             self.current.time = time;
             return !same;
         },
+
+        // Used in presenter.js
         exportToString: function () {
             return JSON.stringify({
                 checkpoints: checkpoints,
