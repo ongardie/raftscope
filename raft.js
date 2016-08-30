@@ -20,7 +20,7 @@ var sendMessage = function(model, message) {
   message.recvTime = model.time +
                      MIN_RPC_LATENCY +
                      Math.random() * (MAX_RPC_LATENCY - MIN_RPC_LATENCY);
-  if (Math.random() < $("#channel-noise").val()) {
+  if (Math.random() < model.channelNoise) {
     message.dropTime = (message.recvTime - message.sendTime) * util.randomBetween(1/3, 3/4) + message.sendTime
   }
   model.messages.push(message);

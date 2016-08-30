@@ -34,6 +34,7 @@ $(function() {
     state = makeState({
         servers: [],
         messages: [],
+        channelNoise: 0,
     });
 
     var sliding = false;
@@ -772,6 +773,7 @@ $(function() {
     });
     noiseSlider.on("slideStop", function () {
         state.fork();
+        state.current.channelNoise = parseFloat(noiseSlider.val());
         state.save();
         render.update();
     });
