@@ -805,15 +805,15 @@ $(function () {
 // // enable tooltips
 // $('[data-toggle="tooltip"]').tooltip();
 
-    state.updater = function (state) {
-        raft.update(state.current);
-        var time = state.current.time;
-        var base = state.base(time);
-        state.current.time = base.time;
-        var same = util.equals(state.current, base);
-        state.current.time = time;
-        return !same;
-    };
+    // state.updater = function (state) {
+    //     raft.update(state.current);
+    //     var time = state.current.time;
+    //     var base = state.base(time);
+    //     state.current.time = base.time;
+    //     var same = util.equals(state.current, base);
+    //     state.current.time = time;
+    //     return !same;
+    // };
 
     state.init();
     render.update();
