@@ -1,126 +1,126 @@
 body {
-  font-size: 16pt;
+    font-size: 16pt;
 }
 
 #modal-details {
-  font-size: 12pt;
+    font-size: 12pt;
 }
 
 .tooltip {
-  font-size: 16pt;
+    font-size: 16pt;
 }
 
 .tooltip.top {
-  padding: 9px 0;
+    padding: 9px 0;
 }
+
 .tooltip.top .tooltip-arrow {
-  margin-left: -10px;
-  border-width: 10px 10px 0;
+    margin-left: -10px;
+    border-width: 10px 10px 0;
 }
 
 textarea#title {
- width: 100%;
- max-height: 3.1ex;
- font-weight: bold;
- margin-top: 10px;
+    width: 100%;
+    max-height: 3.1ex;
+    font-weight: bold;
+    margin-top: 10px;
 }
 
 svg a:hover {
-  cursor: pointer;
+    cursor: pointer;
 }
 
 svg #ring, svg #logsbg {
-  fill: #eeeeee;
+    fill: #eeeeee;
 }
 
 svg .server {
 }
 
 svg .server path {
-  fill: none;
-  stroke: black;
+    fill: none;
+    stroke: black;
 }
 
 svg .server.follower path {
-  stroke: #666666;
+    stroke: #666666;
 }
 
 svg .server text {
-  text-anchor: middle;
-  dominant-baseline: central;
-  text-align: center;
+    text-anchor: middle;
+    dominant-baseline: central;
+    text-align: center;
 }
 
 svg .server.leader text.serverid {
-  fill: red;
+    fill: red;
 }
 
 svg .logs text.serverid.leader {
-  fill: red;
+    fill: red;
 }
 
 svg .server a,
 svg .server a:active,
 svg .server a:hover,
 svg .server a:focus,
-svg .server a:visited
-{
-  font-size: inherit;
-  text-decoration: none;
+svg .server a:visited {
+    font-size: inherit;
+    text-decoration: none;
 }
 
 svg .server .votes .have {
-  fill: black;
-  stroke: black;
+    fill: black;
+    stroke: black;
 }
 
 svg .server .votes .coming {
-  fill: gray;
-  stroke: black;
+    fill: gray;
+    stroke: black;
 }
 
 svg .server .votes .no {
-  fill: none;
-  stroke: black;
+    fill: none;
+    stroke: black;
 }
 
 svg .message {
-  stroke-width: 3;
+    stroke-width: 3;
 }
 
 svg .message.RequestVote {
-  fill:   #66c2a5;
-  stroke: #66c2a5;
+    fill: #66c2a5;
+    stroke: #66c2a5;
 }
 
 svg .message.AppendEntries {
-  fill:   #fc8d62;
-  stroke: #fc8d62;
+    fill: #fc8d62;
+    stroke: #fc8d62;
 }
 
 svg .message.request circle {
 }
 
 svg .message.reply circle {
-  /* fill with no opacity so it's clickable */
-  fill-opacity: 0;
+    /* fill with no opacity so it's clickable */
+    fill-opacity: 0;
 }
 
 svg .logs text {
-  text-anchor: middle;
-  dominant-baseline: central;
-  text-align: center;
+    text-anchor: middle;
+    dominant-baseline: central;
+    text-align: center;
 }
 
 svg .log {
-  fill: none;
-  stroke: gray;
+    fill: none;
+    stroke: gray;
 }
 
 svg .entry rect {
-  fill: none;
-  stroke: black;
-  stroke-width: 3;
+    fill: none;
+    stroke: black;
+    stroke-width: 3;
 }
 
 svg .entry.uncommitted rect {
@@ -130,99 +130,101 @@ svg .entry.committed rect {
 }
 
 svg .entry text {
-  text-anchor: middle;
-  dominant-baseline: central;
-  text-align: center;
+    text-anchor: middle;
+    dominant-baseline: central;
+    text-align: center;
 }
 
 svg #pause.paused {
-  fill:white;
+    fill: white;
 }
 
 svg #pause.resumed {
-  fill:none;
+    fill: none;
 }
 
 @media (min-width: 768px) {
-  #modal-details .modal-body .dl-horizontal dt {
-    width: 100px;
-  }
-  .dl-horizontal dd {
-    margin-left: 120px;
-  }
+    #modal-details .modal-body .dl-horizontal dt {
+        width: 100px;
+    }
+
+    .dl-horizontal dd {
+        margin-left: 120px;
+    }
 }
 
 /* darker slider backgrounds (higher contrast) */
 .slider-track {
-  background-image: linear-gradient(to bottom, #c3c3c3 0%, #efefef 100%);
-}
-.slider-selection {
-  background-image: linear-gradient(to bottom, #efefef 0%, #c3c3c3 100%);
+    background-image: linear-gradient(to bottom, #c3c3c3 0%, #efefef 100%);
 }
 
-a#time-button  {
-  color: inherit;
+.slider-selection {
+    background-image: linear-gradient(to bottom, #efefef 0%, #c3c3c3 100%);
+}
+
+a#time-button {
+    color: inherit;
 }
 
 .slide {
-  height: 500px;
+    height: 500px;
 }
 
 .slide p {
-  font-size: 16pt;
+    font-size: 16pt;
 }
 
 .slide .modal-header {
-  padding: 5px 15px;
+    padding: 5px 15px;
 }
 
 .slide ol {
-  font-weight: bold;
-  color: #428bca;
+    font-weight: bold;
+    color: #428bca;
 }
 
-
 .slide ul {
-  font-size:20pt;
-  font-weight: bold;
-  line-height: 16pt;
-  color: #428bca;
+    font-size: 20pt;
+    font-weight: bold;
+    line-height: 16pt;
+    color: #428bca;
 }
 
 .slide li p {
-  font-weight: normal;
-  font-size:16pt;
-  color: #333;
-  line-height: 1.4;
+    font-weight: normal;
+    font-size: 16pt;
+    color: #333;
+    line-height: 1.4;
 }
 
 .slide blockquote p::before {
-  content: "\201C";
-  font-weight: bold;
-  font-size: 18pt;
-  line-height: 14pt;
-  margin-right: 2px;
+    content: "\201C";
+    font-weight: bold;
+    font-size: 18pt;
+    line-height: 14pt;
+    margin-right: 2px;
 }
+
 .slide blockquote p::after {
-  content: "\201D";
-  font-weight: bold;
-  font-size: 18pt;
-  line-height: 14pt;
+    content: "\201D";
+    font-weight: bold;
+    font-size: 18pt;
+    line-height: 14pt;
 }
 
 .slide blockquote {
-  padding: 0;
-  padding-left: 20px;
-  border: none;
-  margin-bottom: 15px;
+    padding: 0;
+    padding-left: 20px;
+    border: none;
+    margin-bottom: 15px;
 }
 
 .slide blockquote p {
-  line-height: 1.1;
-  font-size: 14pt;
-  font-style: italic;
-  color: #555;
-  margin-bottom: 2px;
+    line-height: 1.1;
+    font-size: 14pt;
+    font-style: italic;
+    color: #555;
+    margin-bottom: 2px;
 }
 
 .slide h1,
@@ -232,9 +234,36 @@ a#time-button  {
 .slide h5,
 .slide h6,
 .blue {
-  color: #428bca;
+    color: #428bca;
 }
 
 .slide .gray {
-  color: #333;
+    color: #333;
+}
+
+#log-table {
+    table-layout: fixed;
+    width: 100%;
+    border: 2px solid #000000;
+}
+
+#log-table > thead {
+    border: 2px solid #000000;
+}
+
+.table-header {
+    background: #ebebeb;
+}
+
+.table-bordered > thead > tr > th,
+.table-bordered > tbody > tr > th,
+.table-bordered > tfoot > tr > th,
+.table-bordered > thead > tr > td,
+.table-bordered > tbody > tr > td,
+.table-bordered > tfoot > tr > td {
+    border: 1px solid #000000;
+}
+
+.cell {
+    text-align: center;
 }

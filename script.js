@@ -16,8 +16,9 @@ var record;
 var replay;
 
 var INITIAL_SERVER_NUMBER = 5;
+var DISPLAY_MAX_LOG_ENTRIES = 10;
 
-$(function() {
+$(function () {
 
     var ARC_WIDTH = 5;
 
@@ -114,7 +115,7 @@ $(function() {
 
 
     var serverSpec = function (id, nservers) {
-        nservers = nservers !== undefined ?  nservers  : state.current.servers.length;
+        nservers = nservers !== undefined ? nservers : state.current.servers.length;
         var coord = util.circleCoord((id - 1) / nservers,
             ringSpec.cx, ringSpec.cy, ringSpec.r);
         return {
@@ -130,41 +131,41 @@ $(function() {
     var messageModal;
 
     var graphics = {};
-    graphics.get_creator = function(tot_srv) {
+    graphics.get_creator = function (tot_srv) {
         return function (server, idx) {
             var s = serverSpec(server.id, tot_srv);
             $('#servers', svg).append(
                 SVG('g')
-                .attr('id', 'server-' + server.id)
-                .attr('class', 'server')
-                .append(SVG('text')
-                    .attr('class', 'serverid')
-                    .text('S' + server.id)
-                    .attr(util.circleCoord(idx / tot_srv,
-                        ringSpec.cx, ringSpec.cy, ringSpec.r + 50)))
-                    .append(SVG('a')
-                    .append(SVG('circle')
-                        .attr('class', 'background')
-                        .attr(s))
-                    .append(SVG('g')
-                        .attr('class', 'votes'))
-                    .append(SVG('path')
-                        .attr('style', 'stroke-width: ' + ARC_WIDTH))
+                    .attr('id', 'server-' + server.id)
+                    .attr('class', 'server')
                     .append(SVG('text')
-                        .attr('class', 'term')
-                        .attr({x: s.cx, y: s.cy}))
+                        .attr('class', 'serverid')
+                        .text('S' + server.id)
+                        .attr(util.circleCoord(idx / tot_srv,
+                            ringSpec.cx, ringSpec.cy, ringSpec.r + 50)))
+                    .append(SVG('a')
+                        .append(SVG('circle')
+                            .attr('class', 'background')
+                            .attr(s))
+                        .append(SVG('g')
+                            .attr('class', 'votes'))
+                        .append(SVG('path')
+                            .attr('style', 'stroke-width: ' + ARC_WIDTH))
+                        .append(SVG('text')
+                            .attr('class', 'term')
+                            .attr({x: s.cx, y: s.cy}))
                     ));
         };
     };
 
-    graphics.realign = function(tot_srv) {
+    graphics.realign = function (tot_srv) {
         return function (server, idx) {
             var s = serverSpec(server.id, tot_srv);
-            $('#server-'+server.id+' .serverid').attr(
-                    util.circleCoord(idx / tot_srv,
-                        ringSpec.cx, ringSpec.cy, ringSpec.r + 50));
-            $('#server-'+server.id+' a .term').attr({x: s.cx, y: s.cy});
-            $('#server-'+server.id+' a circle').attr({cx: s.cx, cy: s.cy});
+            $('#server-' + server.id + ' .serverid').attr(
+                util.circleCoord(idx / tot_srv,
+                    ringSpec.cx, ringSpec.cy, ringSpec.r + 50));
+            $('#server-' + server.id + ' a .term').attr({x: s.cx, y: s.cy});
+            $('#server-' + server.id + ' a circle').attr({cx: s.cx, cy: s.cy});
         };
     };
 
@@ -768,7 +769,7 @@ $(function() {
     noiseSlider.slider({
         tooltip: 'always',
         formater: function (value) {
-            return (value*100).toFixed(1) + '%';
+            return (value * 100).toFixed(1) + '%';
         }
     });
     noiseSlider.on("slideStop", function () {
@@ -825,7 +826,7 @@ $(function() {
         state.fork();
 
         // Really create new server
-        (function(){
+        (function () {
             var nsrv = raft.server(state.current);
             state.current.servers.forEach(graphics.realign(state.current.servers.length + 1));
             state.current.servers.push(nsrv);
@@ -837,5 +838,22 @@ $(function() {
         render.update();
         return true;
     });
-});
 
+    $("#log-div").append(function () {
+        var header = "<th style='width: 15%;' class='cell table-header'>Server</th>";
+        for (var i = 1; i <= DISPLAY_MAX_LOG_ENTRIES; i += 1) {
+            header += "<th class='cell table-header log-index'>" + i + "</th>";
+        }
+
+        var body = "";
+        for (i = 1; i <= INITIAL_SERVER_NUMBER; i += 1) {
+            var row = "<td class='cell' id='cell-" + i + "-0'>S" + i + "</td>";
+            for (var j = 2; j <= DISPLAY_MAX_LOG_ENTRIES + 1; j += 1) {
+                row += "<td class='cell' id='cell-" + i + "-" + (j - 1) + "'></td>"
+            }
+            body += "<tr id='server-row-" + i + "'>" + row + "</tr>";
+        }
+        return "<table id='log-table' class='table table-bordered table-condensed'><thead><tr>" + header +
+            "</tr></thead>" + "<tbody>" + body + "</tbody>" + "</table>";
+    });
+});
