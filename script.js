@@ -219,6 +219,7 @@ $(function() {
     };
 
     var timeSlider;
+    var noiseSlider;
 
     render.clock = function () {
         if (!sliding) {
@@ -762,11 +763,17 @@ $(function() {
         },
     });
 
-    $('#channel-noise').slider({
+    noiseSlider = $('#channel-noise');
+    noiseSlider.slider({
         tooltip: 'always',
         formater: function (value) {
             return (value*100).toFixed(1) + '%';
-        },
+        }
+    });
+    noiseSlider.on("slideStop", function () {
+        state.fork();
+        state.save();
+        render.update();
     });
 
     timeSlider.on('slideStart', function () {

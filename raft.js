@@ -319,7 +319,6 @@ raft.drop = function(model, message) {
   model.messages = model.messages.filter(function(m) {
     return m !== message;
   });
-  console.log("dropped");
 };
 
 raft.timeout = function(model, server) {
