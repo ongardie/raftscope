@@ -20,8 +20,8 @@ var sendMessage = function(model, message) {
   message.recvTime = model.time +
                      MIN_RPC_LATENCY +
                      Math.random() * (MAX_RPC_LATENCY - MIN_RPC_LATENCY);
-  if (Math.random() < 0.5) {
-    message.dropTime = (message.recvTime - message.sendTime) * Math.random() + message.sendTime
+  if (Math.random() < model.channelNoise) {
+    message.dropTime = (message.recvTime - message.sendTime) * util.randomBetween(1/3, 3/4) + message.sendTime
   }
   model.messages.push(message);
 };
@@ -319,7 +319,6 @@ raft.drop = function(model, message) {
   model.messages = model.messages.filter(function(m) {
     return m !== message;
   });
-  console.log("dropped");
 };
 
 raft.timeout = function(model, server) {

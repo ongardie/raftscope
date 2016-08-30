@@ -34,6 +34,7 @@ $(function() {
     state = makeState({
         servers: [],
         messages: [],
+        channelNoise: 0,
     });
 
     var sliding = false;
@@ -219,6 +220,7 @@ $(function() {
     };
 
     var timeSlider;
+    var noiseSlider;
 
     render.clock = function () {
         if (!sliding) {
@@ -761,6 +763,21 @@ $(function() {
             return (value / 1e6).toFixed(3) + 's';
         },
     });
+
+    noiseSlider = $('#channel-noise');
+    noiseSlider.slider({
+        tooltip: 'always',
+        formater: function (value) {
+            return (value*100).toFixed(1) + '%';
+        }
+    });
+    noiseSlider.on("slideStop", function () {
+        state.fork();
+        state.current.channelNoise = parseFloat(noiseSlider.val());
+        state.save();
+        render.update();
+    });
+
     timeSlider.on('slideStart', function () {
         playback.pause();
         sliding = true;
