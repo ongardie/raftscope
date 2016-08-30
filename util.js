@@ -14,6 +14,10 @@ util.value = function(v) {
   return function() { return v; };
 };
 
+util.randomBetween = function(min, max) {
+   return Math.random() * (max - min) + min;
+};
+
 // Use with sort for numbers.
 util.numericCompare = function(a, b) {
   return a - b;

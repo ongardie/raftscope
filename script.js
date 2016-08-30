@@ -761,6 +761,14 @@ $(function() {
             return (value / 1e6).toFixed(3) + 's';
         },
     });
+
+    $('#channel-noise').slider({
+        tooltip: 'always',
+        formater: function (value) {
+            return (value*100).toFixed(1) + '%';
+        },
+    });
+
     timeSlider.on('slideStart', function () {
         playback.pause();
         sliding = true;
