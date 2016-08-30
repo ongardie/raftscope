@@ -22,16 +22,6 @@ $(function () {
 
     var ARC_WIDTH = 5;
 
-    var onReplayDone = undefined;
-    record = function (name) {
-        localStorage.setItem(name, state.exportToString());
-    };
-    replay = function (name, done) {
-        state.importFromString(localStorage.getItem(name));
-        render.update();
-        onReplayDone = done;
-    };
-
     state = makeState({
         servers: [],
         messages: [],
@@ -343,7 +333,7 @@ $(function () {
                 .attr('id', 'logsbg')
                 .attr(logsSpec));
         var height = (logsSpec.height - INDEX_HEIGHT) / state.current.servers.length;
-        var leader = getLeader();
+        var leader = raft.getLeader(state.current);
         var indexSpec = {
             x: logsSpec.x + LABEL_WIDTH + logsSpec.width * 0.05,
             y: logsSpec.y + 2 * height / 6,
@@ -622,13 +612,6 @@ $(function () {
 
 // Transforms the simulation speed from a linear slider
 // to a logarithmically scaling time factor.
-    var speedSliderTransform = function (v) {
-        v = Math.pow(10, v);
-        if (v < 1)
-            return 1;
-        else
-            return v;
-    };
 
     var lastRenderedO = null;
     var lastRenderedV = null;
@@ -650,109 +633,14 @@ $(function () {
             render.logs();
     };
 
-    (function () {
-        var last = null;
-        var step = function (timestamp) {
-            if (!playback.isPaused() && last !== null && timestamp - last < 500) {
-                var wallMicrosElapsed = (timestamp - last) * 1000;
-                var speed = speedSliderTransform($('#speed').slider('getValue'));
-                var modelMicrosElapsed = wallMicrosElapsed / speed;
-                var modelMicros = state.current.time + modelMicrosElapsed;
-                state.seek(modelMicros);
-                if (modelMicros >= state.getMaxTime() && onReplayDone !== undefined) {
-                    var f = onReplayDone;
-                    onReplayDone = undefined;
-                    f();
-                }
-                render.update();
-            }
-            last = timestamp;
-            window.requestAnimationFrame(step);
-        };
-        window.requestAnimationFrame(step);
-    })();
-
-    $(window).keyup(function (e) {
-        if (e.target.id == "title")
-            return;
-        var leader = getLeader();
-        if (e.keyCode == ' '.charCodeAt(0) ||
-            e.keyCode == 190 /* dot, emitted by Logitech remote */) {
-            $('.modal').modal('hide');
-            playback.toggle();
-        } else if (e.keyCode == 'C'.charCodeAt(0)) {
-            if (leader !== null) {
-                state.fork();
-                raft.clientRequest(state.current, leader);
-                state.save();
-                render.update();
-                $('.modal').modal('hide');
-            }
-        } else if (e.keyCode == 'R'.charCodeAt(0)) {
-            if (leader !== null) {
-                state.fork();
-                raft.stop(state.current, leader);
-                raft.resume(state.current, leader);
-                state.save();
-                render.update();
-                $('.modal').modal('hide');
-            }
-        } else if (e.keyCode == 'T'.charCodeAt(0)) {
-            state.fork();
-            raft.spreadTimers(state.current);
-            state.save();
-            render.update();
-            $('.modal').modal('hide');
-        } else if (e.keyCode == 'A'.charCodeAt(0)) {
-            state.fork();
-            raft.alignTimers(state.current);
-            state.save();
-            render.update();
-            $('.modal').modal('hide');
-        } else if (e.keyCode == 'L'.charCodeAt(0)) {
-            state.fork();
-            playback.pause();
-            raft.setupLogReplicationScenario(state.current);
-            state.save();
-            render.update();
-            $('.modal').modal('hide');
-        } else if (e.keyCode == 'B'.charCodeAt(0)) {
-            state.fork();
-            raft.resumeAll(state.current);
-            state.save();
-            render.update();
-            $('.modal').modal('hide');
-        } else if (e.keyCode == 'F'.charCodeAt(0)) {
-            state.fork();
-            render.update();
-            $('.modal').modal('hide');
-        } else if (e.keyCode == 191 && e.shiftKey) { /* question mark */
-            playback.pause();
-            $('#modal-help').modal('show');
-        }
-    });
-
     $('#modal-details').on('show.bs.modal', function (e) {
         playback.pause();
     });
 
-    var getLeader = function () {
-        var leader = null;
-        var term = 0;
-        state.current.servers.forEach(function (server) {
-            if (server.state == 'leader' &&
-                server.term > term) {
-                leader = server;
-                term = server.term;
-            }
-        });
-        return leader;
-    };
-
     $("#speed").slider({
         tooltip: 'always',
         formater: function (value) {
-            return '1/' + speedSliderTransform(value).toFixed(0) + 'x';
+            return '1/' + util.speedSliderTransform(value).toFixed(0) + 'x';
         },
         reversed: true,
     });

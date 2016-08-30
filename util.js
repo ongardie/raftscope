@@ -93,6 +93,14 @@ util.equals = function(x, y) {
   return true;
 };
 
+util.speedSliderTransform = function (v) {
+  v = Math.pow(10, v);
+  if (v < 1)
+    return 1;
+  else
+    return v;
+};
+
 util.greatestLower = function(a, gt) {
   var bs = function(low, high) {
     if (high < low)
