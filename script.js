@@ -20,12 +20,6 @@ $(function () {
 
     var ARC_WIDTH = 5;
 
-    state = makeState({
-        servers: [],
-        messages: [],
-        channelNoise: 0,
-    });
-
     var sliding = false;
 
     var termColors = [
@@ -76,7 +70,13 @@ $(function () {
         };
     }();
 
-    // Initializes servers
+    // Initializes servers and state
+    state = makeState({
+        servers: [],
+        messages: [],
+        channelNoise: 0,
+    });
+
     (function () {
         for (var i = 1; i <= INITIAL_SERVER_NUMBER; i += 1) {
             state.current.servers.push(raft.server(state.current));
@@ -490,13 +490,6 @@ $(function () {
         });
     };
 
-    var relTime = function (time, now) {
-        if (time == util.Inf)
-            return 'infinity';
-        var sign = time > now ? '+' : '';
-        return sign + ((time - now) / 1e3).toFixed(3) + 'ms';
-    };
-
     var button = function (label) {
         return $('<button type="button" class="btn btn-default"></button>')
             .text(label);
@@ -525,10 +518,10 @@ $(function () {
                 .append('<td>' + server.nextIndex[peer] + '</td>')
                 .append('<td>' + server.matchIndex[peer] + '</td>')
                 .append('<td>' + server.voteGranted[peer] + '</td>')
-                .append('<td>' + relTime(server.rpcDue[peer], model.time) + '</td>')
-                .append('<td>' + relTime(server.heartbeatDue[peer], model.time) + '</td>')
+                .append('<td>' + util.relativeTime(server.rpcDue[peer], model.time) + '</td>')
+                .append('<td>' + util.relativeTime(server.heartbeatDue[peer], model.time) + '</td>')
             );
-        });
+        })
         $('.modal-body', m)
             .empty()
             .append($('<dl class="dl-horizontal"></dl>')
@@ -536,7 +529,7 @@ $(function () {
                 .append(li('currentTerm', server.term))
                 .append(li('votedFor', server.votedFor))
                 .append(li('commitIndex', server.commitIndex))
-                .append(li('electionAlarm', relTime(server.electionAlarm, model.time)))
+                .append(li('electionAlarm', util.relativeTime(server.electionAlarm, model.time)))
                 .append($('<dt>peers</dt>'))
                 .append($('<dd></dd>').append(peerTable))
             );
@@ -566,8 +559,8 @@ $(function () {
         var fields = $('<dl class="dl-horizontal"></dl>')
             .append(li('from', 'S' + message.from))
             .append(li('to', 'S' + message.to))
-            .append(li('sent', relTime(message.sendTime, model.time)))
-            .append(li('deliver', relTime(message.recvTime, model.time)))
+            .append(li('sent', util.relativeTime(message.sendTime, model.time)))
+            .append(li('deliver', util.relativeTime(message.recvTime, model.time)))
             .append(li('term', message.term));
         if (message.type == 'RequestVote') {
             if (message.direction == 'request') {
