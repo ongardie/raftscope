@@ -325,19 +325,19 @@ $(function () {
         var logDiv = $("#log-div");
         logDiv.empty();
         logDiv.append(function () {
-            var header = "<th style='width: 15%;' class='cell table-header'>Server</th>";
+            var header = "<th>Server</th>";
             for (var i = 1; i <= DISPLAY_MAX_LOG_ENTRIES; i += 1) {
-                header += "<th class='cell table-header log-index'>" + i + "</th>";
+                header += "<th>" + i + "</th>";
             }
             var body = "";
             for (i = 1; i <= state.current.servers.length; i += 1) {
-                var row = "<td class='cell serverid' id='cell-" + i + "-0'>S" + i + "</td>";
+                var row = "<td id='cell-" + i + "-0'>S" + i + "</td>";
                 for (var j = 2; j <= DISPLAY_MAX_LOG_ENTRIES + 1; j += 1) {
-                    row += "<td class='cell' id='cell-" + i + "-" + (j - 1) + "'></td>"
+                    row += "<td id='cell-" + i + "-" + (j - 1) + "'></td>";
                 }
                 body += "<tr id='server-row-" + i + "'>" + row + "</tr>";
             }
-            return "<table id='log-table' class='table table-bordered'><thead><tr>" + header +
+            return "<table id='log-table'><thead><tr>" + header +
                 "</tr></thead>" + "<tbody>" + body + "</tbody>" + "</table>";
         });
         var leader = raft.getLeader(state.current);
@@ -352,23 +352,10 @@ $(function () {
                 cell.text(entry.term);
             });
             if (leader !== null && leader != server) {
-                // var matchIndex = $("<span class='glyphicon glyphicon-console'></span>");
-                // matchIndex.addClass("match-index");
-                // log.append(
-                //     SVG('circle')
-                //         .attr('title', 'match index')//.tooltip({container: 'body'})
-                //         .attr({
-                //             cx: logEntrySpec(leader.matchIndex[server.id] + 1).x,
-                //             cy: logSpec.y + logSpec.height,
-                //             r: 5
-                //         }));
-                // var x = logEntrySpec(leader.nextIndex[server.id] + 0.5).x;
-                // log.append(SVG('path')
-                //     .attr('title', 'next index')//.tooltip({container: 'body'})
-                //     .attr('style', 'marker-end:url(#TriangleOutM); stroke: black')
-                //     .attr('d', ['M', x, comma, logSpec.y + logSpec.height + logSpec.height / 3,
-                //         'L', x, comma, logSpec.y + logSpec.height + logSpec.height / 6].join(' '))
-                //     .attr('stroke-width', 3));
+                $('#cell-' + server.id + '-' + leader.matchIndex[server.id])
+                    .addClass('matchIndex');
+                $('#cell-' + server.id + '-' + leader.nextIndex[server.id])
+                    .addClass('nextIndex');
             }
         });
     };
