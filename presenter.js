@@ -5,6 +5,7 @@
 /* global util */
 /* global raft */
 /* global makeState */
+/* global speedSlider */
 /* global ELECTION_TIMEOUT */
 /* global SERVER_NEXT_ID */
 'use strict';
@@ -30,7 +31,7 @@ $(function () {
         var step = function (timestamp) {
             if (!playback.isPaused() && last !== null && timestamp - last < 500) {
                 var wallMicrosElapsed = (timestamp - last) * 1000;
-                var speed = util.speedSliderTransform($('#speed').slider('getValue'));
+                var speed = util.speedSliderTransform(speedSlider.slider('getValue'));
                 var modelMicrosElapsed = wallMicrosElapsed / speed;
                 var modelMicros = state.current.time + modelMicrosElapsed;
                 state.seek(modelMicros);
@@ -47,11 +48,22 @@ $(function () {
         window.requestAnimationFrame(step);
     })();
 
+    $("#help").click(function () {
+        playback.pause();
+        $('#modal-help').modal('show');
+    });
+
+    $("#reset-simulation").click(function () {
+        state.clear();
+        state.save();
+        playback.pause();
+        render.update();
+    });
+
     $(window).keyup(function (e) {
         if (e.target.id == "title")
             return;
         var leader = raft.getLeader(state.current);
-        var speedSlider = $('#speed');
         if (e.keyCode == ' '.charCodeAt(0) || e.keyCode == 190 /* dot, emitted by Logitech remote */) {
             e.preventDefault();
             $('.modal').modal('hide');
@@ -126,6 +138,13 @@ $(function () {
             speedSlider.slider('setValue', 2.0);
             render.update();
         }
+        // else if (e.keyCode == 'J'.charCodeAt(0)) {
+        //     e.preventDefault();
+        //     state.clear();
+        //     state.save();
+        //     playback.pause();
+        //     render.update();
+        // }
     });
 
     raft.spreadTimers = function (model) {

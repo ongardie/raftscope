@@ -134,3 +134,7 @@ util.relativeTime = function (time, now) {
     var sign = time > now ? '+' : '';
     return sign + ((time - now) / 1e3).toFixed(3) + 'ms';
 };
+
+util.getButton = function (label) {
+    return $('<button type="button" class="btn btn-default"></button>').text(label);
+};

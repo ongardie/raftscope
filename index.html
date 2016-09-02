@@ -10,18 +10,57 @@
         <script src="bootstrap/js/bootstrap.min.js"></script>
         <script src="bootstrap-slider/js/bootstrap-slider.js"></script>
         <script src="bootstrap-contextmenu/bootstrap-contextmenu.js"></script>
-        <script src="presenter.js"></script>
         <script src="util.js"></script>
-        <script src="raft.js"></script>
         <script src="state.js"></script>
+        <script src="raft.js"></script>
+        <script src="render.js"></script>
+        <script src="presenter.js"></script>
         <script src="script.js"></script>
         <link href="style.css" rel="stylesheet">
     </head>
     <body>
         <div class="container">
+            <nav class="navbar navbar-default" style="margin-top: 20px">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+                                data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                        </button>
+                        <a class="navbar-brand" href="#">Raftscope</a>
+                    </div>
+                    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                        <ul class="nav navbar-nav">
+                            <li>
+                                <div class="btn-group" roles="group">
+                                    <button class="btn btn-success navbar-btn" id="add-server"><span
+                                            class="glyphicon glyphicon-plus"></span>&nbsp;Add Server
+                                    </button>
+                                    <button class="btn btn-danger navbar-btn" id="remove-server"><span
+                                            class="glyphicon glyphicon-minus"></span>&nbsp;Remove Server
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+                        <ul class="nav navbar-nav navbar-right">
+                            <!--<li>-->
+                                <!--<button class="btn btn-secondary navbar-btn" id="reset-simulation">Reset</button>-->
+                            <!--</li>-->
+                            <li>
+                                <button class="btn btn-info navbar-btn" id="help"><span
+                                        class="glyphicon glyphicon-question-sign"></span>&nbsp;Help
+                                </button>
+                            </li>
+                        </ul>
+                    </div><!-- /.navbar-collapse -->
+                </div>
+            </nav>
             <div class="row" style="margin-top: 20px">
                 <div class="col-sm-6">
-                    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="745"
+                    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="600"
                          height="500">
                         <defs>
                             <marker id="TriangleOutM" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
@@ -46,37 +85,38 @@
                         </g>
                         <g id="messages"></g>
                         <g id="servers"></g>
-                        <g class="logs"></g>
                     </svg>
                 </div>
-                <div class="col-sm-6" id="log-div"></div>
+                <div class="col-sm-6" id="sliders">
+                    <div class="row">
+                        <a id="time-button" href="#"><span id="time-icon" class="glyphicon glyphicon-time"
+                                                           style="font-size: 24pt; vertical-align: middle"
+                                                           data-toggle="tooltip"
+                                                           title="Timeline; click to pause/play"></span></a>
+                        &nbsp;&nbsp;
+                        <input id="time" data-slider-id='timeSlider' type="text"
+                               data-slider-min="0"
+                               data-slider-max="1000" data-slider-step="1" data-slider-value="0">
+                    </div>
+                    <div class="row">
+                        <span id="speed-icon" class="glyphicon glyphicon-dashboard"
+                              style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip"
+                              title="Simulation speed"></span>
+                        &nbsp;&nbsp;
+                        <input id="speed" data-slider-id='speedSlider' type="text" data-slider-min="0"
+                               data-slider-max="3" data-slider-step=".01" data-slider-value="2">
+                    </div>
+                    <div class="row">
+                        <span id="channel-noise-icon" class="glyphicon glyphicon-flash"
+                              style="font-size: 24pt; vertical-align: middle"
+                              data-toggle="tooltip" title="Channel noise"></span>
+                        &nbsp;&nbsp;
+                        <input id="channel-noise" data-slider-id='noiseSlider' type="text"
+                               data-slider-min="0" data-slider-max="1" data-slider-step=".001" data-slider-value="0">
+                    </div>
+                </div>
             </div>
-            <div class="row" style="margin-top: 20px">
-                <a id="time-button" href="#"><span id="time-icon" class="glyphicon glyphicon-time"
-                                                   style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip"
-                                                   title="Timeline; click to pause/play"></span></a>
-                &nbsp;&nbsp;
-                <input id="time" style="width: 650px" data-slider-id='timeSlider' type="text" data-slider-min="0"
-                       data-slider-max="1000" data-slider-step="1" data-slider-value="0"/>
-            </div>
-            <div class="row" style="margin-top: 20px">
-                <span id="speed-icon" class="glyphicon glyphicon-dashboard"
-                      style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip"
-                      title="Simulation speed"></span>
-                &nbsp;&nbsp;
-                <input id="speed" style="width: 650px" data-slider-id='speedSlider' type="text" data-slider-min="0"
-                       data-slider-max="3" data-slider-step=".01" data-slider-value="2"/>
-            </div>
-            <div class="row" style="margin-top: 20px">
-                <span id="channel-noise-icon" class="glyphicon glyphicon-flash" style="font-size: 24pt; vertical-align: middle"
-                      data-toggle="tooltip" title="Channel noise"></span>
-                &nbsp;&nbsp;
-                <input id="channel-noise" style="width: 650px" data-slider-id='noiseSlider' type="text"
-                       data-slider-min="0" data-slider-max="1" data-slider-step=".001" data-slider-value="0"/>
-            </div>
-            <div class="row" style="margin-top: 20px">
-                <button class="btn btn-primary" id="add-server">Add Server</button>
-            </div>
+            <div class="col-sm-6" id="log-div"></div>
         </div>
         <div id="modal-details" class="modal" tabindex="-1" data-keyboard="true">
             <div class="modal-dialog">
@@ -149,6 +189,10 @@
                                 <td><kbd>N</kbd></td>
                                 <td>Reset simulation speed to default (1/100x)</td>
                             </tr>
+                            <!--<tr>-->
+                                <!--<td><kbd>J</kbd></td>-->
+                                <!--<td>Reset simulation speed to starting conditions</td>-->
+                            <!--</tr>-->
                         </table>
                     </div>
                 </div>

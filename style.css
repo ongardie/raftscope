@@ -261,3 +261,19 @@ table#log-table {
   left: 13px;
   z-index: 3;
 }
+
+#reset-simulation {
+    margin-right: 10px;
+}
+
+#sliders {
+    margin-top: 30px;
+}
+
+#sliders .row {
+    margin-bottom: 50px;
+    margin-right: 10%;
+}
+#sliders .slider.slider-horizontal {
+    width: 80%;
+}
