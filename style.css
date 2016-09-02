@@ -267,3 +267,5 @@ a#time-button {
 .cell {
     text-align: center;
 }
+
+.modal {z-index: 1080;}
