@@ -6,7 +6,7 @@
 'use strict';
 
 var raft = {};
-var RPC_TIMEOUT = 40000;
+var RPC_TIMEOUT = 50000;
 var MIN_RPC_LATENCY = 10000;
 var MAX_RPC_LATENCY = 15000;
 var ELECTION_TIMEOUT = 100000;
@@ -161,7 +161,7 @@ var NEXT_SERVER_ID = 1;
                 entries: data,
                 commitIndex: Math.min(server.commitIndex, lastIndex)
             });
-            /* TODO: if (data.length) */
+            /* TODO: data.length check */
             // if (data.length)
             server.rpcDue[peer] = model.time + RPC_TIMEOUT;
             server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;

@@ -226,6 +226,8 @@ a#time-button {
 
 .modal {z-index: 1080;}
 
+
+/* Log table */
 #log-div {
   height: auto;
   overflow-x: auto;
@@ -277,3 +279,9 @@ table#log-table {
 .color-7{fill: #BCAAA4; background: #BCAAA4}
 .color-8{fill: #80CBC4; background: #80CBC4}
 .color-9{fill: #B39DDB; background: #B39DDB}
+.color-stopped{fill: gray; background: gray}
+
+/* nav bar */
+#sliders {margin-top: 30px}
+#sliders .row {margin-bottom: 50px; margin-right: 10%}
+#sliders .slider.slider-horizontal {width: 80%}
