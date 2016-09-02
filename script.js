@@ -321,6 +321,59 @@ $(function () {
                 .text(entry.term));
     };
 
+
+    render.logsTable = function () {
+        var logDiv = $("#log-div");
+        logDiv.empty();
+        logDiv.append(function () {
+            var header = "<th style='width: 15%;' class='cell table-header'>Server</th>";
+            for (var i = 1; i <= DISPLAY_MAX_LOG_ENTRIES; i += 1) {
+                header += "<th class='cell table-header log-index'>" + i + "</th>";
+            }
+            var body = "";
+            for (i = 1; i <= state.current.servers.length; i += 1) {
+                var row = "<td class='cell serverid' id='cell-" + i + "-0'>S" + i + "</td>";
+                for (var j = 2; j <= DISPLAY_MAX_LOG_ENTRIES + 1; j += 1) {
+                    row += "<td class='cell' id='cell-" + i + "-" + (j - 1) + "'></td>"
+                }
+                body += "<tr id='server-row-" + i + "'>" + row + "</tr>";
+            }
+            return "<table id='log-table' class='table table-bordered'><thead><tr>" + header +
+                "</tr></thead>" + "<tbody>" + body + "</tbody>" + "</table>";
+        });
+        var leader = raft.getLeader(state.current);
+        state.current.servers.forEach(function (server) {
+            var rowHeader = $("#cell-"+server.id+"-0");
+            rowHeader.addClass(server.state);
+            server.log.forEach(function (entry, i) {
+                var cell = $("#cell-"+server.id+"-"+(i+1));
+                var committed = (i+1) <= server.commitIndex;
+                cell.addClass('entry ' + (committed ? 'committed' : 'uncommitted'));
+                cell.css({'background': termColors[entry.term % termColors.length]});
+                cell.text(entry.term);
+            });
+            if (leader !== null && leader != server) {
+                // var matchIndex = $("<span class='glyphicon glyphicon-console'></span>");
+                // matchIndex.addClass("match-index");
+                // log.append(
+                //     SVG('circle')
+                //         .attr('title', 'match index')//.tooltip({container: 'body'})
+                //         .attr({
+                //             cx: logEntrySpec(leader.matchIndex[server.id] + 1).x,
+                //             cy: logSpec.y + logSpec.height,
+                //             r: 5
+                //         }));
+                // var x = logEntrySpec(leader.nextIndex[server.id] + 0.5).x;
+                // log.append(SVG('path')
+                //     .attr('title', 'next index')//.tooltip({container: 'body'})
+                //     .attr('style', 'marker-end:url(#TriangleOutM); stroke: black')
+                //     .attr('d', ['M', x, comma, logSpec.y + logSpec.height + logSpec.height / 3,
+                //         'L', x, comma, logSpec.y + logSpec.height + logSpec.height / 6].join(' '))
+                //     .attr('stroke-width', 3));
+            }
+        });
+    };
+
     render.logs = function () {
         var LABEL_WIDTH = 25;
         var INDEX_HEIGHT = 25;
@@ -511,7 +564,7 @@ $(function () {
                 .append(li('commitIndex', server.commitIndex))
                 .append(li('electionAlarm', util.relativeTime(server.electionAlarm, model.time)))
             );
-        if (server.state === 'leader') {
+        if (server.state === 'leader' || server.state === "candidate") {
             var peerTable = $('<table></table>')
                 .addClass('table table-condensed')
                 .append($('<tr></tr>')
@@ -626,7 +679,8 @@ $(function () {
         render.servers(serversSame);
         render.messages(messagesSame);
         if (!serversSame)
-            render.logs();
+            // render.logs();
+            render.logsTable();
     };
 
     $('#modal-details').on('show.bs.modal', function (e) {
@@ -722,23 +776,4 @@ $(function () {
         return true;
     });
 
-    $("#log-div").append(function () {
-        var header = "<th style='width: 15%;' class='cell table-header'>Server</th>";
-        for (var i = 1; i <= DISPLAY_MAX_LOG_ENTRIES; i += 1) {
-            header += "<th class='cell table-header log-index'>" + i + "</th>";
-        }
-
-        var body = "";
-        for (i = 1; i <= INITIAL_SERVER_NUMBER; i += 1) {
-            var row = "<td class='cell' id='cell-" + i + "-0'>S" + i + "</td>";
-            for (var j = 2; j <= DISPLAY_MAX_LOG_ENTRIES + 1; j += 1) {
-                row += "<td class='cell' id='cell-" + i + "-" + (j - 1) + "'></td>"
-            }
-            body += "<tr id='server-row-" + i + "'>" + row + "</tr>";
-        }
-        return "<table id='log-table' class='table table-bordered table-condensed'><thead><tr>" + header +
-            "</tr></thead>" + "<tbody>" + body + "</tbody>" + "</table>";
-    });
-
-    // $("#cell-3-5").append("<p>prova</p>");
 });
