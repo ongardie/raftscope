@@ -97,6 +97,8 @@ util.equals = function (x, y) {
     return true;
 };
 
+// Transforms the simulation speed from a linear slider
+// to a logarithmically scaling time factor.
 util.speedSliderTransform = function (v) {
     v = Math.pow(10, v);
     if (v < 1)

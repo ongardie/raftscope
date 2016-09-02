@@ -321,7 +321,6 @@ $(function () {
                 .text(entry.term));
     };
 
-
     render.logsTable = function () {
         var logDiv = $("#log-div");
         logDiv.empty();
@@ -581,7 +580,8 @@ $(function () {
                     .append('<td>' + server.nextIndex[peer] + '</td>')
                     .append('<td>' + server.matchIndex[peer] + '</td>')
                     .append('<td>' + server.voteGranted[peer] + '</td>')
-                    .append('<td>' + util.relativeTime(server.rpcDue[peer], model.time) + '</td>')
+                    //  Dirty hack to replace negative timers from being displayed in rpcDue
+                    .append('<td>' + util.relativeTime(server.rpcDue[peer] == 0 ? util.Inf : server.rpcDue[peer], model.time) + '</td>')
                     .append('<td>' + util.relativeTime(server.heartbeatDue[peer], model.time) + '</td>')
                 );
             });
@@ -658,9 +658,6 @@ $(function () {
         });
         m.modal();
     };
-
-// Transforms the simulation speed from a linear slider
-// to a logarithmically scaling time factor.
 
     var lastRenderedO = null;
     var lastRenderedV = null;
