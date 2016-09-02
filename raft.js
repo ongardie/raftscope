@@ -6,7 +6,7 @@
 'use strict';
 
 var raft = {};
-var RPC_TIMEOUT = 50000;
+var RPC_TIMEOUT = 40000;
 var MIN_RPC_LATENCY = 10000;
 var MAX_RPC_LATENCY = 15000;
 var ELECTION_TIMEOUT = 100000;
@@ -61,6 +61,7 @@ var NEXT_SERVER_ID = 1;
         patch.nextIndex[NEXT_SERVER_ID] = 1;
         patch.rpcDue[NEXT_SERVER_ID] = 0;
         patch.heartbeatDue[NEXT_SERVER_ID] = 0;
+        // patch.heartbeatDue[NEXT_SERVER_ID] = util.Inf;
 
         var peers = model.servers.map(function (server) {
             server.peers.push(NEXT_SERVER_ID);
@@ -82,6 +83,7 @@ var NEXT_SERVER_ID = 1;
             nextIndex: util.makeMap(peers, 1),
             rpcDue: util.makeMap(peers, 0),
             heartbeatDue: util.makeMap(peers, 0),
+            // heartbeatDue: util.makeMap(peers, util.Inf),
         };
     };
 
@@ -107,6 +109,7 @@ var NEXT_SERVER_ID = 1;
             server.nextIndex = util.makeMap(server.peers, 1);
             server.rpcDue = util.makeMap(server.peers, 0);
             server.heartbeatDue = util.makeMap(server.peers, 0);
+            // server.heartbeatDue = util.makeMap(server.peers, util.Inf);
         }
     };
 
@@ -147,6 +150,7 @@ var NEXT_SERVER_ID = 1;
                 server.log.length);
             if (server.matchIndex[peer] + 1 < server.nextIndex[peer])
                 lastIndex = prevIndex;
+            var data = server.log.slice(prevIndex, lastIndex);
             sendRequest(model, {
                 from: server.id,
                 to: peer,
@@ -154,9 +158,11 @@ var NEXT_SERVER_ID = 1;
                 term: server.term,
                 prevIndex: prevIndex,
                 prevTerm: logTerm(server.log, prevIndex),
-                entries: server.log.slice(prevIndex, lastIndex),
+                entries: data,
                 commitIndex: Math.min(server.commitIndex, lastIndex)
             });
+            /* TODO: if (data.length) */
+            // if (data.length)
             server.rpcDue[peer] = model.time + RPC_TIMEOUT;
             server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
         }

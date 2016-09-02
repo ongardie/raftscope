@@ -12,8 +12,6 @@
 var playback;
 var render = {};
 var state;
-var record;
-var replay;
 
 var INITIAL_SERVER_NUMBER = 5;
 var DISPLAY_MAX_LOG_ENTRIES = 10;
@@ -21,12 +19,6 @@ var DISPLAY_MAX_LOG_ENTRIES = 10;
 $(function () {
 
     var ARC_WIDTH = 5;
-
-    state = makeState({
-        servers: [],
-        messages: [],
-        channelNoise: 0,
-    });
 
     var sliding = false;
 
@@ -78,6 +70,13 @@ $(function () {
         };
     }();
 
+    // Initializes servers and state
+    state = makeState({
+        servers: [],
+        messages: [],
+        channelNoise: 0,
+    });
+
     (function () {
         for (var i = 1; i <= INITIAL_SERVER_NUMBER; i += 1) {
             state.current.servers.push(raft.server(state.current));
@@ -102,7 +101,6 @@ $(function () {
         width: 320,
         height: 270,
     };
-
 
     var serverSpec = function (id, nservers) {
         nservers = nservers !== undefined ? nservers : state.current.servers.length;
@@ -323,6 +321,59 @@ $(function () {
                 .text(entry.term));
     };
 
+
+    render.logsTable = function () {
+        var logDiv = $("#log-div");
+        logDiv.empty();
+        logDiv.append(function () {
+            var header = "<th style='width: 15%;' class='cell table-header'>Server</th>";
+            for (var i = 1; i <= DISPLAY_MAX_LOG_ENTRIES; i += 1) {
+                header += "<th class='cell table-header log-index'>" + i + "</th>";
+            }
+            var body = "";
+            for (i = 1; i <= state.current.servers.length; i += 1) {
+                var row = "<td class='cell serverid' id='cell-" + i + "-0'>S" + i + "</td>";
+                for (var j = 2; j <= DISPLAY_MAX_LOG_ENTRIES + 1; j += 1) {
+                    row += "<td class='cell' id='cell-" + i + "-" + (j - 1) + "'></td>"
+                }
+                body += "<tr id='server-row-" + i + "'>" + row + "</tr>";
+            }
+            return "<table id='log-table' class='table table-bordered'><thead><tr>" + header +
+                "</tr></thead>" + "<tbody>" + body + "</tbody>" + "</table>";
+        });
+        var leader = raft.getLeader(state.current);
+        state.current.servers.forEach(function (server) {
+            var rowHeader = $("#cell-"+server.id+"-0");
+            rowHeader.addClass(server.state);
+            server.log.forEach(function (entry, i) {
+                var cell = $("#cell-"+server.id+"-"+(i+1));
+                var committed = (i+1) <= server.commitIndex;
+                cell.addClass('entry ' + (committed ? 'committed' : 'uncommitted'));
+                cell.css({'background': termColors[entry.term % termColors.length]});
+                cell.text(entry.term);
+            });
+            if (leader !== null && leader != server) {
+                // var matchIndex = $("<span class='glyphicon glyphicon-console'></span>");
+                // matchIndex.addClass("match-index");
+                // log.append(
+                //     SVG('circle')
+                //         .attr('title', 'match index')//.tooltip({container: 'body'})
+                //         .attr({
+                //             cx: logEntrySpec(leader.matchIndex[server.id] + 1).x,
+                //             cy: logSpec.y + logSpec.height,
+                //             r: 5
+                //         }));
+                // var x = logEntrySpec(leader.nextIndex[server.id] + 0.5).x;
+                // log.append(SVG('path')
+                //     .attr('title', 'next index')//.tooltip({container: 'body'})
+                //     .attr('style', 'marker-end:url(#TriangleOutM); stroke: black')
+                //     .attr('d', ['M', x, comma, logSpec.y + logSpec.height + logSpec.height / 3,
+                //         'L', x, comma, logSpec.y + logSpec.height + logSpec.height / 6].join(' '))
+                //     .attr('stroke-width', 3));
+            }
+        });
+    };
+
     render.logs = function () {
         var LABEL_WIDTH = 25;
         var INDEX_HEIGHT = 25;
@@ -492,13 +543,6 @@ $(function () {
         });
     };
 
-    var relTime = function (time, now) {
-        if (time == util.Inf)
-            return 'infinity';
-        var sign = time > now ? '+' : '';
-        return sign + ((time - now) / 1e3).toFixed(3) + 'ms';
-    };
-
     var button = function (label) {
         return $('<button type="button" class="btn btn-default"></button>')
             .text(label);
@@ -511,26 +555,6 @@ $(function () {
         var li = function (label, value) {
             return '<dt>' + label + '</dt><dd>' + value + '</dd>';
         };
-        var peerTable = $('<table></table>')
-            .addClass('table table-condensed')
-            .append($('<tr></tr>')
-                .append('<th>peer</th>')
-                .append('<th>next index</th>')
-                .append('<th>match index</th>')
-                .append('<th>vote granted</th>')
-                .append('<th>RPC due</th>')
-                .append('<th>heartbeat due</th>')
-            );
-        server.peers.forEach(function (peer) {
-            peerTable.append($('<tr></tr>')
-                .append('<td>S' + peer + '</td>')
-                .append('<td>' + server.nextIndex[peer] + '</td>')
-                .append('<td>' + server.matchIndex[peer] + '</td>')
-                .append('<td>' + server.voteGranted[peer] + '</td>')
-                .append('<td>' + relTime(server.rpcDue[peer], model.time) + '</td>')
-                .append('<td>' + relTime(server.heartbeatDue[peer], model.time) + '</td>')
-            );
-        });
         $('.modal-body', m)
             .empty()
             .append($('<dl class="dl-horizontal"></dl>')
@@ -538,13 +562,38 @@ $(function () {
                 .append(li('currentTerm', server.term))
                 .append(li('votedFor', server.votedFor))
                 .append(li('commitIndex', server.commitIndex))
-                .append(li('electionAlarm', relTime(server.electionAlarm, model.time)))
+                .append(li('electionAlarm', util.relativeTime(server.electionAlarm, model.time)))
+            );
+        if (server.state === 'leader' || server.state === "candidate") {
+            var peerTable = $('<table></table>')
+                .addClass('table table-condensed')
+                .append($('<tr></tr>')
+                    .append('<th>peer</th>')
+                    .append('<th>next index</th>')
+                    .append('<th>match index</th>')
+                    .append('<th>vote granted</th>')
+                    .append('<th>RPC due</th>')
+                    .append('<th>heartbeat due</th>')
+                );
+            server.peers.forEach(function (peer) {
+                peerTable.append($('<tr></tr>')
+                    .append('<td>S' + peer + '</td>')
+                    .append('<td>' + server.nextIndex[peer] + '</td>')
+                    .append('<td>' + server.matchIndex[peer] + '</td>')
+                    .append('<td>' + server.voteGranted[peer] + '</td>')
+                    .append('<td>' + util.relativeTime(server.rpcDue[peer], model.time) + '</td>')
+                    .append('<td>' + util.relativeTime(server.heartbeatDue[peer], model.time) + '</td>')
+                );
+            });
+            $('.modal-body dl', m)
                 .append($('<dt>peers</dt>'))
                 .append($('<dd></dd>').append(peerTable))
-            );
+        }
         var footer = $('.modal-footer', m);
         footer.empty();
-        serverActions.forEach(function (action) {
+        serverActions.filter(function (action) {
+           return server.state == "leader" || action[0] !== "request"
+        }).forEach(function (action) {
             footer.append(button(action[0])
                 .click(function () {
                     state.fork();
@@ -568,8 +617,8 @@ $(function () {
         var fields = $('<dl class="dl-horizontal"></dl>')
             .append(li('from', 'S' + message.from))
             .append(li('to', 'S' + message.to))
-            .append(li('sent', relTime(message.sendTime, model.time)))
-            .append(li('deliver', relTime(message.recvTime, model.time)))
+            .append(li('sent', util.relativeTime(message.sendTime, model.time)))
+            .append(li('deliver', util.relativeTime(message.recvTime, model.time)))
             .append(li('term', message.term));
         if (message.type == 'RequestVote') {
             if (message.direction == 'request') {
@@ -630,7 +679,8 @@ $(function () {
         render.servers(serversSame);
         render.messages(messagesSame);
         if (!serversSame)
-            render.logs();
+            // render.logs();
+            render.logsTable();
     };
 
     $('#modal-details').on('show.bs.modal', function (e) {
@@ -683,8 +733,7 @@ $(function () {
         render.update();
     });
 
-    $('#time-button')
-        .click(function () {
+    $('#time-button').click(function () {
             playback.toggle();
             return false;
         });
@@ -727,21 +776,4 @@ $(function () {
         return true;
     });
 
-    $("#log-div").append(function () {
-        var header = "<th style='width: 15%;' class='cell table-header'>Server</th>";
-        for (var i = 1; i <= DISPLAY_MAX_LOG_ENTRIES; i += 1) {
-            header += "<th class='cell table-header log-index'>" + i + "</th>";
-        }
-
-        var body = "";
-        for (i = 1; i <= INITIAL_SERVER_NUMBER; i += 1) {
-            var row = "<td class='cell' id='cell-" + i + "-0'>S" + i + "</td>";
-            for (var j = 2; j <= DISPLAY_MAX_LOG_ENTRIES + 1; j += 1) {
-                row += "<td class='cell' id='cell-" + i + "-" + (j - 1) + "'></td>"
-            }
-            body += "<tr id='server-row-" + i + "'>" + row + "</tr>";
-        }
-        return "<table id='log-table' class='table table-bordered table-condensed'><thead><tr>" + header +
-            "</tr></thead>" + "<tbody>" + body + "</tbody>" + "</table>";
-    });
 });

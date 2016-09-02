@@ -60,6 +60,7 @@ svg .logs text.serverid.leader {
     fill: red;
 }
 
+
 svg .server a,
 svg .server a:active,
 svg .server a:hover,
@@ -117,24 +118,6 @@ svg .log {
     stroke: gray;
 }
 
-svg .entry rect {
-    fill: none;
-    stroke: black;
-    stroke-width: 3;
-}
-
-svg .entry.uncommitted rect {
-}
-
-svg .entry.committed rect {
-}
-
-svg .entry text {
-    text-anchor: middle;
-    dominant-baseline: central;
-    text-align: center;
-}
-
 svg #pause.paused {
     fill: white;
 }
@@ -145,11 +128,11 @@ svg #pause.resumed {
 
 @media (min-width: 768px) {
     #modal-details .modal-body .dl-horizontal dt {
-        width: 100px;
+        width: 120px;
     }
 
     .dl-horizontal dd {
-        margin-left: 120px;
+        margin-left: 140px;
     }
 }
 
@@ -243,29 +226,38 @@ a#time-button {
 
 #log-table {
     table-layout: fixed;
-    width: 100%;
-    border: 2px solid #000000;
+    /*width: 100%;*/
+    border-collapse: separate;
+    border-width: 0px;
+    border-spacing: 1px 12px;
 }
 
-#log-table > thead {
-    border: 2px solid #000000;
+#log-table tbody > tr > td.cell,
+#log-table thead > tr > th.cell {
+    text-align: center;
+    border: 2px solid #dddddd;
+    height: 30px;
+    padding: 1px;
 }
 
-.table-header {
+#log-table > thead > tr > th.table-header {
+    border: 2px solid #000000;
     background: #ebebeb;
 }
 
-.table-bordered > thead > tr > th,
-.table-bordered > tbody > tr > th,
-.table-bordered > tfoot > tr > th,
-.table-bordered > thead > tr > td,
-.table-bordered > tbody > tr > td,
-.table-bordered > tfoot > tr > td {
-    border: 1px solid #000000;
+#log-table tbody > tr > td.serverid.leader {
+    color: red;
 }
 
-.cell {
-    text-align: center;
+#log-table tbody > tr > td.entry {
+    font-size: 100%;
 }
 
+#log-table tbody > tr > td.committed {
+    border: 2px solid #000000;
+}
+
+#log-table tbody > tr > td.uncommitted {
+    border: 2px dashed #000000;
+}
 .modal {z-index: 1080;}
