@@ -224,40 +224,40 @@ a#time-button {
     color: #333;
 }
 
-#log-table {
-    table-layout: fixed;
-    /*width: 100%;*/
-    border-collapse: separate;
-    border-width: 0px;
-    border-spacing: 1px 12px;
-}
-
-#log-table tbody > tr > td.cell,
-#log-table thead > tr > th.cell {
-    text-align: center;
-    border: 2px solid #dddddd;
-    height: 30px;
-    padding: 1px;
-}
-
-#log-table > thead > tr > th.table-header {
-    border: 2px solid #000000;
-    background: #ebebeb;
-}
-
-#log-table tbody > tr > td.serverid.leader {
-    color: red;
-}
-
-#log-table tbody > tr > td.entry {
-    font-size: 100%;
-}
-
-#log-table tbody > tr > td.committed {
-    border: 2px solid #000000;
-}
-
-#log-table tbody > tr > td.uncommitted {
-    border: 2px dashed #000000;
-}
 .modal {z-index: 1080;}
+
+#log-div {overflow-x: auto;}
+table#log-table {
+  border-collapse: separate;
+  border-spacing: 1px;
+  min-width: 100%;
+  margin: 10px;
+}
+#log-table th, #log-table td {
+  border: 2px solid #efefef;
+  width: 36px;
+  padding: 4px 2px 4px 2px;
+  text-align: center;
+  position: relative;
+}
+#log-table tr *:first-child {text-align: left}
+#log-table td.leader {color: red;}
+#log-table td.committed, #log-table td.uncommitted {border-color: #000}
+#log-table td.uncommitted {border-style: dashed;}
+
+.matchIndex::after {
+  content: '\25CF';
+  position: absolute;
+  top: 1.2em;
+  right: -8px;
+  z-index: 3;
+}
+
+.nextIndex::after {
+  content: '\25B2';
+  position: absolute;
+  font-size: 15px;
+  bottom: -0.8em;
+  left: 13px;
+  z-index: 3;
+}
