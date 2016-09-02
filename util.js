@@ -127,9 +127,7 @@ util.clamp = function (value, low, high) {
 };
 
 util.relativeTime = function (time, now) {
-    /* Added a dirty hack to remove 'negative timers' from visualization: this can be improved by setting
-    rpcDue and heartbeatDue to util.Inf instead of 0 where appropriate in raft.js */
-    if (time == util.Inf || (time - now) < 0)
+    if (time == util.Inf)
         return 'infinity';
     var sign = time > now ? '+' : '';
     return sign + ((time - now) / 1e3).toFixed(3) + 'ms';

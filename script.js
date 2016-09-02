@@ -502,26 +502,6 @@ $(function () {
         var li = function (label, value) {
             return '<dt>' + label + '</dt><dd>' + value + '</dd>';
         };
-        var peerTable = $('<table></table>')
-            .addClass('table table-condensed')
-            .append($('<tr></tr>')
-                .append('<th>peer</th>')
-                .append('<th>next index</th>')
-                .append('<th>match index</th>')
-                .append('<th>vote granted</th>')
-                .append('<th>RPC due</th>')
-                .append('<th>heartbeat due</th>')
-            );
-        server.peers.forEach(function (peer) {
-            peerTable.append($('<tr></tr>')
-                .append('<td>S' + peer + '</td>')
-                .append('<td>' + server.nextIndex[peer] + '</td>')
-                .append('<td>' + server.matchIndex[peer] + '</td>')
-                .append('<td>' + server.voteGranted[peer] + '</td>')
-                .append('<td>' + util.relativeTime(server.rpcDue[peer], model.time) + '</td>')
-                .append('<td>' + util.relativeTime(server.heartbeatDue[peer], model.time) + '</td>')
-            );
-        })
         $('.modal-body', m)
             .empty()
             .append($('<dl class="dl-horizontal"></dl>')
@@ -530,12 +510,37 @@ $(function () {
                 .append(li('votedFor', server.votedFor))
                 .append(li('commitIndex', server.commitIndex))
                 .append(li('electionAlarm', util.relativeTime(server.electionAlarm, model.time)))
+            );
+        if (server.state === 'leader') {
+            var peerTable = $('<table></table>')
+                .addClass('table table-condensed')
+                .append($('<tr></tr>')
+                    .append('<th>peer</th>')
+                    .append('<th>next index</th>')
+                    .append('<th>match index</th>')
+                    .append('<th>vote granted</th>')
+                    .append('<th>RPC due</th>')
+                    .append('<th>heartbeat due</th>')
+                );
+            server.peers.forEach(function (peer) {
+                peerTable.append($('<tr></tr>')
+                    .append('<td>S' + peer + '</td>')
+                    .append('<td>' + server.nextIndex[peer] + '</td>')
+                    .append('<td>' + server.matchIndex[peer] + '</td>')
+                    .append('<td>' + server.voteGranted[peer] + '</td>')
+                    .append('<td>' + util.relativeTime(server.rpcDue[peer], model.time) + '</td>')
+                    .append('<td>' + util.relativeTime(server.heartbeatDue[peer], model.time) + '</td>')
+                );
+            });
+            $('.modal-body dl', m)
                 .append($('<dt>peers</dt>'))
                 .append($('<dd></dd>').append(peerTable))
-            );
+        }
         var footer = $('.modal-footer', m);
         footer.empty();
-        serverActions.forEach(function (action) {
+        serverActions.filter(function (action) {
+           return server.state == "leader" || action[0] !== "request"
+        }).forEach(function (action) {
             footer.append(button(action[0])
                 .click(function () {
                     state.fork();
@@ -674,8 +679,7 @@ $(function () {
         render.update();
     });
 
-    $('#time-button')
-        .click(function () {
+    $('#time-button').click(function () {
             playback.toggle();
             return false;
         });
@@ -735,4 +739,6 @@ $(function () {
         return "<table id='log-table' class='table table-bordered table-condensed'><thead><tr>" + header +
             "</tr></thead>" + "<tbody>" + body + "</tbody>" + "</table>";
     });
+
+    // $("#cell-3-5").append("<p>prova</p>");
 });

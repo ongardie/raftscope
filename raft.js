@@ -6,7 +6,7 @@
 'use strict';
 
 var raft = {};
-var RPC_TIMEOUT = 50000;
+var RPC_TIMEOUT = 25000;
 var MIN_RPC_LATENCY = 10000;
 var MAX_RPC_LATENCY = 15000;
 var ELECTION_TIMEOUT = 100000;
@@ -147,6 +147,7 @@ var NEXT_SERVER_ID = 1;
                 server.log.length);
             if (server.matchIndex[peer] + 1 < server.nextIndex[peer])
                 lastIndex = prevIndex;
+            var data = server.log.slice(prevIndex, lastIndex);
             sendRequest(model, {
                 from: server.id,
                 to: peer,
@@ -154,10 +155,11 @@ var NEXT_SERVER_ID = 1;
                 term: server.term,
                 prevIndex: prevIndex,
                 prevTerm: logTerm(server.log, prevIndex),
-                entries: server.log.slice(prevIndex, lastIndex),
+                entries: data,
                 commitIndex: Math.min(server.commitIndex, lastIndex)
             });
-            server.rpcDue[peer] = model.time + RPC_TIMEOUT;
+            if (data.length)
+                server.rpcDue[peer] = model.time + RPC_TIMEOUT;
             server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
         }
     };
