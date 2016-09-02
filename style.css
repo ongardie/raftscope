@@ -226,7 +226,12 @@ a#time-button {
 
 .modal {z-index: 1080;}
 
-#log-div {overflow-x: auto;}
+#log-div {
+  height: auto;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+
 table#log-table {
   border-collapse: separate;
   border-spacing: 1px;
@@ -261,3 +266,14 @@ table#log-table {
   left: 13px;
   z-index: 3;
 }
+
+.color-0{fill: #64B5F6; background: #64B5F6}
+.color-1{fill: #B2FF59; background: #B2FF59}
+.color-2{fill: #5C6BC0; background: #5C6BC0}
+.color-3{fill: #FFAB91; background: #FFAB91}
+.color-4{fill: #EA80FC; background: #EA80FC}
+.color-5{fill: #1DE9B6; background: #1DE9B6}
+.color-6{fill: #ffd92f; background: #ffd92f}
+.color-7{fill: #BCAAA4; background: #BCAAA4}
+.color-8{fill: #80CBC4; background: #80CBC4}
+.color-9{fill: #B39DDB; background: #B39DDB}

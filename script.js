@@ -6,15 +6,17 @@
 /* global raft */
 /* global makeState */
 /* global ELECTION_TIMEOUT */
-/* global SERVER_NEXT_ID */
 'use strict';
 
 var playback;
 var render = {};
 var state;
 
-var INITIAL_SERVER_NUMBER = 5;
-var DISPLAY_MAX_LOG_ENTRIES = 10;
+var INITIAL_SERVER_NUMBER = 5,
+    DISPLAY_INITIAL_LE = 10,
+    DISPLAY_MIN_EMPTY_LE = 1,
+    DISPLAY_LE_EXTEND = 5,
+    DISPLAY_LE_CURRENT = 0;
 
 $(function () {
 
@@ -242,9 +244,7 @@ $(function () {
                 $('text.term', serverNode).text(server.term);
                 serverNode.attr('class', 'server ' + server.state);
                 $('circle.background', serverNode)
-                    .attr('style', 'fill: ' +
-                        (server.state == 'stopped' ? 'gray'
-                            : termColors[server.term % termColors.length]));
+                    .addClass('color-' + server.term % 7);
                 var votesGroup = $('.votes', serverNode);
                 votesGroup.empty();
                 if (server.state == 'candidate') {
@@ -322,36 +322,58 @@ $(function () {
     };
 
 
-    render.logsTable = function () {
-        var logDiv = $("#log-div");
-        logDiv.empty();
-        logDiv.append(function () {
-            var header = "<th>Server</th>";
-            for (var i = 1; i <= DISPLAY_MAX_LOG_ENTRIES; i += 1) {
-                header += "<th>" + i + "</th>";
-            }
-            var body = "";
-            for (i = 1; i <= state.current.servers.length; i += 1) {
-                var row = "<td id='cell-" + i + "-0'>S" + i + "</td>";
-                for (var j = 2; j <= DISPLAY_MAX_LOG_ENTRIES + 1; j += 1) {
-                    row += "<td id='cell-" + i + "-" + (j - 1) + "'></td>";
-                }
-                body += "<tr id='server-row-" + i + "'>" + row + "</tr>";
-            }
-            return "<table id='log-table'><thead><tr>" + header +
-                "</tr></thead>" + "<tbody>" + body + "</tbody>" + "</table>";
-        });
-        var leader = raft.getLeader(state.current);
-        state.current.servers.forEach(function (server) {
-            var rowHeader = $("#cell-"+server.id+"-0");
-            rowHeader.addClass(server.state);
-            server.log.forEach(function (entry, i) {
-                var cell = $("#cell-"+server.id+"-"+(i+1));
-                var committed = (i+1) <= server.commitIndex;
-                cell.addClass('entry ' + (committed ? 'committed' : 'uncommitted'));
-                cell.css({'background': termColors[entry.term % termColors.length]});
-                cell.text(entry.term);
-            });
+    render.logsTable = function (model) {
+        var max_log_len = Math.max.apply(null,
+            model.servers.map(function(server) {return server.log.length;})),
+            req_log_len = Math.max(DISPLAY_LE_CURRENT, DISPLAY_INITIAL_LE, max_log_len + DISPLAY_MIN_EMPTY_LE);
+        if (req_log_len > DISPLAY_LE_CURRENT)
+            DISPLAY_LE_CURRENT += DISPLAY_LE_EXTEND;
+
+
+        var cnt = $("#log-div");
+        cnt.html([
+            '<table id="log-table"><thead><tr>',
+            (function(){
+                var buff = ['<th>Servers</th>'];
+                for (var i=1; i <= DISPLAY_LE_CURRENT; i++)
+                    buff.push('<th>' + i + '</th>');
+                return buff.join('');
+            })(),
+            '</tr></thead><tbody>',
+            (function(){
+                var buff = [];
+                Array.prototype.push.apply(
+                    buff,
+                    model.servers.map(function(server){
+                        var line = ['<tr><td id="cell-', server.id, '-0">S',
+                            server.id, '</td>'];
+                        for (var i=0; i < DISPLAY_LE_CURRENT; i++) {
+                            Array.prototype.push.apply(line,
+                                    ['<td id="cell-', server.id, '-', i+1, '" ']);
+                            if (i < server.log.length) {
+                                Array.prototype.push.apply(line, [
+                                    'class="',
+                                    (server.commitIndex < i ? 'un' : '') + 'committed ',
+                                    'color-', server.log[i].term%7,
+                                ]);
+                            }
+                            Array.prototype.push.apply(line, [
+                                '">',
+                                i < server.log.length ? server.log[i].term : '',
+                                '</td>',
+                            ]);
+                        }
+                        return line.join('');
+                    })
+                );
+                return buff.join('');
+            })(),
+            '</tbody></table>'
+        ].join(''));
+
+        var leader = raft.getLeader(model);
+        if (leader !== null) $('#cell-' + leader.id + '-0').addClass('leader');
+        model.servers.forEach(function(server) {
             if (leader !== null && leader != server) {
                 $('#cell-' + server.id + '-' + leader.matchIndex[server.id])
                     .addClass('matchIndex');
@@ -667,7 +689,7 @@ $(function () {
         render.messages(messagesSame);
         if (!serversSame)
             // render.logs();
-            render.logsTable();
+            render.logsTable(state.current);
     };
 
     $('#modal-details').on('show.bs.modal', function (e) {
