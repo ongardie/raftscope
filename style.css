@@ -230,15 +230,16 @@ a#time-button {
 /* Log table */
 #log-div {
   height: auto;
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow: auto;
+  /* overflow-y: 0; */
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 table#log-table {
   border-collapse: separate;
   border-spacing: 1px;
   min-width: 100%;
-  margin: 10px;
 }
 #log-table th, #log-table td {
   border: 2px solid #efefef;
@@ -249,24 +250,33 @@ table#log-table {
 }
 #log-table tr *:first-child {text-align: left}
 #log-table td.leader {color: red;}
-#log-table td.committed, #log-table td.uncommitted {border-color: #000}
-#log-table td.uncommitted {border-style: dashed;}
+#log-table td.committed, #log-table td.uncommitted {
+  border-color: #777;
+  box-shadow: inset 0 0 1px 2px #fff;
+}
+#log-table td.uncommitted {border-color:#fff; border-style: dashed;}
+
+
+.matchIndex::after,
+.nextIndex::after {
+  position: absolute;
+  z-index: 3;
+  color: #000;
+  text-shadow: 0 0 2px gray;
+}
 
 .matchIndex::after {
   content: '\25CF';
-  position: absolute;
   top: 1.2em;
   right: -8px;
-  z-index: 3;
 }
 
 .nextIndex::after {
   content: '\25B2';
-  position: absolute;
   font-size: 15px;
   bottom: -0.8em;
-  left: 13px;
-  z-index: 3;
+  left: 50%;
+  margin-left:-7px;
 }
 
 .color-0{fill: #64B5F6; background: #64B5F6}

@@ -325,19 +325,21 @@ $(function () {
                     model.servers.map(function(server){
                         var line = ['<tr><td id="cell-', server.id, '-0">S',
                             server.id, '</td>'];
-                        for (var i=0; i < DISPLAY_LE_CURRENT; i++) {
+                        for (var array_id=0; array_id < DISPLAY_LE_CURRENT; array_id++) {
+                            var log_id = array_id+1;
                             Array.prototype.push.apply(line,
-                                    ['<td id="cell-', server.id, '-', i+1, '" ']);
-                            if (i < server.log.length) {
+                                    ['<td id="cell-', server.id, '-', log_id, '" ']);
+                            if (array_id < server.log.length) {
+                                console.log(server.id, server.commitIndex, log_id, server.log[array_id].term);
                                 Array.prototype.push.apply(line, [
                                     'class="',
-                                    (server.commitIndex < i ? 'un' : '') + 'committed ',
-                                    'color-', server.log[i].term % 10,
+                                    (log_id <= server.commitIndex? '': 'un') + 'committed ',
+                                    'color-', server.log[array_id].term % 10,
                                 ]);
                             }
                             Array.prototype.push.apply(line, [
                                 '">',
-                                i < server.log.length ? server.log[i].term : '',
+                                array_id < server.log.length ? server.log[array_id].term : '',
                                 '</td>',
                             ]);
                         }
