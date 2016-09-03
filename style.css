@@ -230,8 +230,8 @@ a#time-button {
 /* Log table */
 #log-div {
   height: auto;
-  overflow: auto;
-  /* overflow-y: 0; */
+  overflow-x: auto;
+  overflow-y: hidden;
   padding-top: 10px;
   padding-bottom: 10px;
 }
@@ -279,16 +279,16 @@ table#log-table {
   margin-left:-7px;
 }
 
-.color-0{fill: #64B5F6; background: #64B5F6}
-.color-1{fill: #B2FF59; background: #B2FF59}
-.color-2{fill: #5C6BC0; background: #5C6BC0}
-.color-3{fill: #FFAB91; background: #FFAB91}
-.color-4{fill: #EA80FC; background: #EA80FC}
-.color-5{fill: #1DE9B6; background: #1DE9B6}
-.color-6{fill: #ffd92f; background: #ffd92f}
-.color-7{fill: #BCAAA4; background: #BCAAA4}
-.color-8{fill: #80CBC4; background: #80CBC4}
-.color-9{fill: #B39DDB; background: #B39DDB}
+.color-0{fill: #FC0FC0; background: #FC0FC0}/*pink*/
+.color-1{fill: #4CAF50; background: #4CAF50}/*green*/
+.color-2{fill: #2196F3; background: #2196F3} /*light blue*/
+.color-3{fill: #FF1744; background: #FF1744} /*red*/
+.color-4{fill: #FFEB3B; background: #FFEB3B} /*yellow*/
+.color-5{fill: #18FFFF; background: #18FFFF} /* cyan*/
+.color-6{fill: #E040FB; background: #E040FB} /*purple*/
+.color-7{fill: #69F0AE; background: #69F0AE}
+.color-8{fill: #FF9800; background: #FF9800} /*orange*/
+.color-9{fill: #64DD17; background: #64DD17} /*light greem*/
 .color-stopped{fill: gray; background: gray}
 
 /* nav bar */
