@@ -362,6 +362,8 @@ $(function () {
                     .addClass('nextIndex');
             }
         });
+
+        cnt.scrollLeft(cnt.width());
     };
 
     render.pendingTable = function(model) {
