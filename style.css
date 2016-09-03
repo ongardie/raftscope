@@ -256,22 +256,43 @@ table#log-table {
 }
 #log-table td.uncommitted {border-color:#fff; border-style: dashed;}
 
+#log-table td.noop::after { content: 'N' }
+#log-table td.config::after { content: 'C' }
 
-.matchIndex::after,
-.nextIndex::after {
+.scroll {overflow-x: scroll;}
+
+#pending-table {
+  width: 100%;
+  border: solid #333;
+  overflow-x: scroll;
+}
+
+#pending-table td {
+  height: 30px;
+  width: 30px;
+  min-width: 30px ;
+  max-width: 30px ;
+  border: solid pink;
+  text-align: center;
+}
+#pending-table tr>td:last-child {width:auto;border: none;}
+
+
+.matchIndex::before,
+.nextIndex::before {
   position: absolute;
   z-index: 3;
   color: #000;
   text-shadow: 0 0 2px gray;
 }
 
-.matchIndex::after {
+.matchIndex::before {
   content: '\25CF';
   top: 1.2em;
   right: -8px;
 }
 
-.nextIndex::after {
+.nextIndex::before {
   content: '\25B2';
   font-size: 15px;
   bottom: -0.8em;

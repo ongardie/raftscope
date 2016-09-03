@@ -14,15 +14,16 @@ var INITIAL_SERVER_NUMBER = 5;
 $(function () {
 
     // Initializes servers and state
-    state = makeState({
+    state = makeState({ // this is "current"
         servers: [],
         messages: [],
+        pendingConf: [],
         channelNoise: 0,
     });
 
     (function () {
         for (var i = 1; i <= INITIAL_SERVER_NUMBER; i += 1) {
-            state.current.servers.push(raft.server(state.current));
+            state.current.servers.push(raft.server(state.current, true));
         }
     })();
 

@@ -330,11 +330,12 @@ $(function () {
                             Array.prototype.push.apply(line,
                                     ['<td id="cell-', server.id, '-', log_id, '" ']);
                             if (array_id < server.log.length) {
-                                console.log(server.id, server.commitIndex, log_id, server.log[array_id].term);
                                 Array.prototype.push.apply(line, [
                                     'class="',
                                     (log_id <= server.commitIndex? '': 'un') + 'committed ',
                                     'color-', server.log[array_id].term % 10,
+                                    server.log[array_id].isConfig ? ' config' :  '',
+                                    server.log[array_id].isNoop? ' noop' :  '',
                                 ]);
                             }
                             Array.prototype.push.apply(line, [
@@ -363,6 +364,23 @@ $(function () {
         });
     };
 
+    render.pendingTable = function(model) {
+        $('#pending-queue').html(
+            model.pendingConf
+                .map(function(entry) {
+                    return [
+                        '<td>',
+                        entry.isAdd ? '+' : '-',
+                        entry.value,
+                        '</td>',
+                    ];
+                })
+                .reduce(function(prev, curr){return prev.concat(curr);}, [])
+                .join('') +
+            '<td></td>'
+        );
+    };
+
 
 
 // -----------------------------------------------------------------------------
@@ -388,6 +406,7 @@ $(function () {
         render.messages(messagesSame);
         if (!serversSame)
             render.logsTable(state.current);
+        render.pendingTable(state.current);
     };
 
 // -----------------------------------------------------------------------------
@@ -494,16 +513,7 @@ $(function () {
 
     $("#add-server").click(function () {
         state.fork();
-
-        // Really create new server
-        (function () {
-            var nsrv = raft.server(state.current);
-            state.current.servers.forEach(graphics.realign(state.current.servers.length + 1));
-            state.current.servers.push(nsrv);
-            graphics.get_creator(state.current.servers.length)(nsrv, state.current.servers.length - 1);
-        })();
-
-        // Save and display
+        raft.addServer(state.current);
         state.save();
         render.update();
         return true;
