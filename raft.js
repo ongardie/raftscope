@@ -56,14 +56,18 @@ var NEXT_SERVER_ID = 1;
         return now + (Math.random() + 1) * ELECTION_TIMEOUT;
     };
 
-    raft.server = function (model) {
+    raft.getIdAndIncrement = function() {
+        return NEXT_SERVER_ID++;
+    };
+
+    raft.server = function (model, my_id) {
         var peers = [];
         for (var i=1; i <= INITIAL_SERVER_NUMBER; i++)
-            if (i != NEXT_SERVER_ID)
+            if (i != my_id)
                 peers.push(i);
 
         return {
-            id: NEXT_SERVER_ID++,
+            id: my_id,
             peers: peers,
             state: 'follower',
             term: 1,
@@ -161,18 +165,7 @@ var NEXT_SERVER_ID = 1;
     };
 
     rules.advanceCommitIndex = function (model, server) {
-        // var matchIndexes = util.mapValues(server.matchIndex).concat(server.log.length);
-        // matchIndexes.sort(util.numericCompare);
-        // var n = matchIndexes[Math.floor(model.servers.length / 2)];
-
-        var removalBias =
-            server.configIndex &&
-            server.configIndex > server.commitIndex &&
-            !server.log[server.configIndex-1].isAdd ?
-            -1 : 0;
-
-
-        var quorum = Math.floor((model.servers.length  + removalBias)  / 2 + 1);
+        var quorum = Math.floor(server.peers.length  / 2) + 1;
 
         var mi = util.clone(server.matchIndex);
         mi[server.id] = server.log.length;
@@ -402,11 +395,14 @@ var NEXT_SERVER_ID = 1;
 
     };
 
-    raft.addServer = function(model) {
+    raft.addServer = function(model, id) {
         var leader = raft.getLeader(model);
+        if (id === undefined)
+            id = raft.getIdAndIncrement();
+
         if (leader && leader.configIndex <= leader.commitIndex) {
             // leader.helpCatchUp(model, leader, server);
-            var server = raft.server(model);
+            var server = raft.server(model, id);
             (function (server, peer_id) {
                 // Add peer to server
                 server.voteGranted[peer_id] = false;
@@ -431,7 +427,7 @@ var NEXT_SERVER_ID = 1;
             model.servers.push(server);
             graphics.get_creator(model.servers.length)(server, model.servers.length - 1);
         } else {
-            model.pendingConf.push({isAdd: true});
+            model.pendingConf.push({isAdd: true, value: id});
         }
     };
 

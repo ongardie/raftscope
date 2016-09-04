@@ -378,8 +378,9 @@ $(function () {
             model.pendingConf
                 .map(function(entry) {
                     return [
-                        '<td>',
-                        entry.isAdd ? '+' : '-',
+                        '<td class="',
+                        entry.isAdd ? 'add' : 'rm',
+                        '">',
                         entry.value,
                         '</td>',
                     ];

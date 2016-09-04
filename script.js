@@ -23,7 +23,7 @@ $(function () {
 
     (function () {
         for (var i = 1; i <= INITIAL_SERVER_NUMBER; i += 1) {
-            state.current.servers.push(raft.server(state.current));
+            state.current.servers.push(raft.server(state.current, raft.getIdAndIncrement()));
         }
     })();
 

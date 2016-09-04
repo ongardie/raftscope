@@ -263,7 +263,7 @@ table#log-table {
 #log-table td.noop::after { content: 'N' }
 #log-table td.config::after { content: 'C' }
 
-.scroll {overflow-x: scroll;}
+.mustScroll {overflow-x: scroll;}
 
 #log-table-legend {
   font-size: 14px;
@@ -274,29 +274,33 @@ table#log-table {
 }
 
 #pending-table {
-  width: 80%;
+  width: 100%;
   border: 1px solid gray;
   overflow-x: scroll;
   display: inline-block;
+
+  border-radius: 5px;
+  border-collapse: inherit;
+  background-color: #eeeeee;
 }
 
-#pending-icon{
-  margin-top: -32px;
-  margin-right: 17px;
-}
+.logh {line-height: 40px;}
+
 #pending-table td {
   height: 40px;
   width: 30px;
   min-width: 30px ;
-  max-width: 30px ;
+  padding: 0 2px 0 2px;
+
   background-color: #149bdf;
-  border: 2px solid #149bdf;
+  border: 1px solid white;
   line-height: 36px;
   box-sizing: border-box;
   border-collapse: inherit;
-  border-radius: 5px;
+  border-radius: 4px;
   text-align: center;
   color: white;
+  white-space: nowrap;
 }
 #pending-table tr>td:last-child {
   width:auto;
@@ -306,11 +310,10 @@ table#log-table {
   background-color: transparent;
 }
 
-table#pending-table{
-  border-radius: 5px;
-  border-collapse: inherit;
-  background-color: #eeeeee;
-}
+#pending-table td.add::before { content: '+ S'}
+#pending-table td.rm {background-color: #FF1744}
+#pending-table td.rm::before { content: '- S'}
+
 
 .matchIndex::before,
 .nextIndex::before {
