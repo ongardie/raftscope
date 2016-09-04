@@ -23,7 +23,7 @@ $(function () {
 
     (function () {
         for (var i = 1; i <= INITIAL_SERVER_NUMBER; i += 1) {
-            state.current.servers.push(raft.server(state.current, true));
+            state.current.servers.push(raft.server(state.current));
         }
     })();
 
@@ -34,17 +34,6 @@ $(function () {
     // // enable tooltips
     // $('[data-toggle="tooltip"]').tooltip();
 
-    // state.updater = function (state) {
-    //     raft.update(state.current);
-    //     var time = state.current.time;
-    //     var base = state.base(time);
-    //     state.current.time = base.time;
-    //     var same = util.equals(state.current, base);
-    //     state.current.time = time;
-    //     return !same;
-    // };
-
     state.init();
     render.update();
-
 });

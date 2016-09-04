@@ -4,6 +4,7 @@
 /* jshint jquery: true */
 /* global util */
 /* global graphics */
+/* global INITIAL_SERVER_NUMBER */
 'use strict';
 
 var raft = {};
@@ -55,15 +56,11 @@ var NEXT_SERVER_ID = 1;
         return now + (Math.random() + 1) * ELECTION_TIMEOUT;
     };
 
-    raft.server = function (model, auto_add) {
-        var peers = model.servers.map(function (server) {return server.id;});
-        if (auto_add) {
-            model.servers.map(function (peer_id) {
-                return function(server){
-                    addPeer(server, peer_id);
-                };
-            }(NEXT_SERVER_ID));
-        }
+    raft.server = function (model) {
+        var peers = [];
+        for (var i=1; i <= INITIAL_SERVER_NUMBER; i++)
+            if (i != NEXT_SERVER_ID)
+                peers.push(i);
 
         return {
             id: NEXT_SERVER_ID++,
@@ -75,11 +72,6 @@ var NEXT_SERVER_ID = 1;
             commitIndex: 0,
             configIndex: 0,
             electionAlarm: makeElectionAlarm(model.time),
-            voteGranted: util.makeMap(peers, false),
-            matchIndex: util.makeMap(peers, 0),
-            nextIndex: util.makeMap(peers, 1),
-            rpcDue: util.makeMap(peers, 0),
-            heartbeatDue: util.makeMap(peers, 0),
         };
     };
 
@@ -101,11 +93,7 @@ var NEXT_SERVER_ID = 1;
             server.votedFor = server.id;
             server.state = 'candidate';
             server.voteGranted = util.makeMap(server.peers, false);
-            server.matchIndex = util.makeMap(server.peers, 0);
-            server.nextIndex = util.makeMap(server.peers, 1);
-            server.rpcDue = util.makeMap(server.peers, 0);
-            server.heartbeatDue = util.makeMap(server.peers, 0);
-            // server.heartbeatDue = util.makeMap(server.peers, util.Inf);
+            server.rpcDue = util.makeMap(server.peers, false);
         }
     };
 
@@ -128,6 +116,9 @@ var NEXT_SERVER_ID = 1;
         if (server.state == 'candidate' &&
             util.countTrue(util.mapValues(server.voteGranted)) + 1 > Math.floor(model.servers.length / 2)) {
             server.state = 'leader';
+
+            // Build stats table
+            server.matchIndex = util.makeMap(server.peers, 0);
             server.nextIndex = util.makeMap(server.peers, server.log.length + 1);
             server.rpcDue = util.makeMap(server.peers, util.Inf);
             server.heartbeatDue = util.makeMap(server.peers, 0);
@@ -170,20 +161,47 @@ var NEXT_SERVER_ID = 1;
     };
 
     rules.advanceCommitIndex = function (model, server) {
-        if (server.state != 'leader') return;
+        // var matchIndexes = util.mapValues(server.matchIndex).concat(server.log.length);
+        // matchIndexes.sort(util.numericCompare);
+        // var n = matchIndexes[Math.floor(model.servers.length / 2)];
 
-        var matchIndexes = util.mapValues(server.matchIndex).concat(server.log.length);
-        matchIndexes.sort(util.numericCompare);
-        var n = matchIndexes[Math.floor(model.servers.length / 2)];
+        var removalBias =
+            server.configIndex &&
+            server.configIndex > server.commitIndex &&
+            !server.log[server.configIndex-1].isAdd ?
+            -1 : 0;
+
+
+        var quorum = Math.floor((model.servers.length  + removalBias)  / 2 + 1);
+
+        var mi = util.clone(server.matchIndex);
+        mi[server.id] = server.log.length;
+        var n = $.map(mi, function(val) {return parseInt(val);})
+                 .sort(function(a,b){return b-a;})[quorum];
+
         if (logTerm(server.log, n) == server.term) {
             server.commitIndex = Math.max(server.commitIndex, n);
-            if (model.pendingConf.length &&
-                    server.configIndex <= server.commitIndex)
-                raft.configChange(model, model.pendingConf.shift());
+            if (server.configIndex <= server.commitIndex) {
+                // if srv to remove: remove
+                var last = server.log[server.configIndex - 1];
+                if (last && !last.isAdd) {
+                    var deadServerWalking = $('#server-' + last.value);
+                    if (deadServerWalking) {
+                        model.servers = model.servers.filter(
+                                function(srv){return srv.id !== last.value;});
+                        model.servers.forEach(graphics.realign(model.servers.length));
+                        deadServerWalking.remove();
+                    }
+                }
+
+                if (model.pendingConf.length)
+                    raft.configChange(model, model.pendingConf.shift());
+            }
         }
     };
 
     rules.helpCatchUp = function (model, leader, server) {
+        // TODO: implement me
         console.error("Not yet implemented");
         return;
     };
@@ -222,8 +240,10 @@ var NEXT_SERVER_ID = 1;
         entries
             .filter(function(e){return e.isConfig;})
             .forEach(function(conf){
-                if (conf.isAdd) addPeer(server, conf.value);
-                else removePeer(server, conf.value);
+                if (conf.isAdd) server.peers.push(conf.value);
+                else server.peers = server.peers.filter(
+                        function(srv){return srv.id !== conf.value;});
+
             });
     };
 
@@ -269,7 +289,9 @@ var NEXT_SERVER_ID = 1;
         if (server.term < reply.term)
             stepDown(model, server, reply.term);
         if (server.state == 'leader' &&
-            server.term == reply.term) {
+                server.term == reply.term &&
+                server.matchIndex[reply.from] !== undefined)
+        {
             if (reply.success) {
                 server.matchIndex[reply.from] = Math.max(server.matchIndex[reply.from],
                     reply.matchIndex);
@@ -302,12 +324,18 @@ var NEXT_SERVER_ID = 1;
         model.servers.forEach(function (server) {
             rules.startNewElection(model, server);
             rules.becomeLeader(model, server);
-            rules.advanceCommitIndex(model, server);
+        });
+
+        var leader = raft.getLeader(model);
+        if (leader) rules.advanceCommitIndex(model, leader);
+
+        model.servers.forEach(function (server) {
             server.peers.forEach(function (peer) {
                 rules.sendRequestVote(model, server, peer);
                 rules.sendAppendEntries(model, server, peer);
             });
         });
+
         var deliver = [];
         var keep = [];
         model.messages.forEach(function (message) {
@@ -370,24 +398,8 @@ var NEXT_SERVER_ID = 1;
 
     raft.configChange = function (model, change) {
         if (change.isAdd) raft.addServer(model);
-        if (change.isRemove) raft.removeServer(model, change.value);
+        else raft.removeServer(model, {id:change.value});
 
-    };
-
-    var addPeer = function (server, peer_id) {
-        var patch = {'voteGranted': {}, 'matchIndex': {}, 'nextIndex': {}, 'rpcDue': {}, 'heartbeatDue': {}};
-        patch.voteGranted[peer_id] = false;
-        patch.matchIndex[peer_id] = 0;
-        patch.nextIndex[peer_id] = 1;
-        patch.rpcDue[peer_id] = 0;
-        patch.heartbeatDue[peer_id] = 0;
-
-        server.peers.push(peer_id);
-        jQuery.extend(true, server, patch);
-    };
-
-    var removePeer = function (server, peer_id) {
-        cosole.error("Not yet implementd");
     };
 
     raft.addServer = function(model) {
@@ -395,7 +407,17 @@ var NEXT_SERVER_ID = 1;
         if (leader && leader.configIndex <= leader.commitIndex) {
             // leader.helpCatchUp(model, leader, server);
             var server = raft.server(model);
-            addPeer(leader, server.id);
+            (function (server, peer_id) {
+                // Add peer to server
+                server.voteGranted[peer_id] = false;
+                server.matchIndex[peer_id] = 0;
+                server.nextIndex[peer_id] = 1;
+                server.rpcDue[peer_id] = 0;
+                server.heartbeatDue[peer_id] = 0;
+
+                server.peers.push(peer_id);
+            })(leader, server.id);
+
             leader.log.push({
                 term: leader.term,
                 value: server.id,
@@ -413,8 +435,37 @@ var NEXT_SERVER_ID = 1;
         }
     };
 
-    raft.removeServer = function (model, server_id) {
-        console.error("Not yet implemented");
+    raft.removeServer = function (model, server) {
+        var leader = raft.getLeader(model);
+        if (leader && leader.configIndex <= leader.commitIndex) {
+
+            // Remove from leader
+            (function (server, peer_id) {
+                // remove peer from server
+                console.log("pre delete", server.matchIndex);
+                delete server.voteGranted[peer_id];
+                delete server.matchIndex[peer_id];
+                delete server.nextIndex[peer_id];
+                delete server.rpcDue[peer_id];
+                delete server.heartbeatDue[peer_id];
+
+                console.log("post delete", server.matchIndex);
+
+                server.peers = server.peers.filter(
+                        function(srv){return srv !== peer_id;});
+            })(leader, server.id);
+
+            leader.log.push({
+                term: leader.term,
+                value: server.id,
+                isConfig: true,
+                isAdd: false,
+            });
+
+            leader.configIndex = leader.log.length;
+        } else {
+            model.pendingConf.push({isAdd: false, value: server.id});
+        }
     };
 
     raft.getLeader = function (model) {
