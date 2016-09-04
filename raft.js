@@ -240,7 +240,7 @@ var NEXT_SERVER_ID = 1;
         entries
             .filter(function(e){return e.isConfig;})
             .forEach(function(conf){
-                if (conf.isAdd) server.peers.push(conf.value);
+                if (conf.isAdd && conf.value !== server.id) server.peers.push(conf.value);
                 else server.peers = server.peers.filter(
                         function(srv){return srv.id !== conf.value;});
 
@@ -442,14 +442,11 @@ var NEXT_SERVER_ID = 1;
             // Remove from leader
             (function (server, peer_id) {
                 // remove peer from server
-                console.log("pre delete", server.matchIndex);
                 delete server.voteGranted[peer_id];
                 delete server.matchIndex[peer_id];
                 delete server.nextIndex[peer_id];
                 delete server.rpcDue[peer_id];
                 delete server.heartbeatDue[peer_id];
-
-                console.log("post delete", server.matchIndex);
 
                 server.peers = server.peers.filter(
                         function(srv){return srv !== peer_id;});
