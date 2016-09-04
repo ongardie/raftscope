@@ -276,7 +276,6 @@ table#log-table {
 #pending-table {
   width: 100%;
   border: 1px solid gray;
-  overflow-x: scroll;
   display: inline-block;
 
   border-radius: 5px;
