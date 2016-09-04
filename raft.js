@@ -157,8 +157,6 @@ var NEXT_SERVER_ID = 1;
                 entries: data,
                 commitIndex: Math.min(server.commitIndex, lastIndex)
             });
-            /* TODO: data.length check */
-            // if (data.length)
             server.rpcDue[peer] = model.time + RPC_TIMEOUT;
             server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
         }
@@ -179,12 +177,7 @@ var NEXT_SERVER_ID = 1;
                 var last = server.log[server.configIndex - 1];
                 if (last && !last.isAdd) {
                     var deadServerWalking = $('#server-' + last.value);
-                    if (deadServerWalking) {
-                        model.servers = model.servers.filter(
-                                function(srv){return srv.id !== last.value;});
-                        model.servers.forEach(graphics.realign(model.servers.length));
-                        deadServerWalking.remove();
-                    }
+                    if (deadServerWalking) deadServersWalking[last.value] = true;
                 }
 
                 if (model.pendingConf.length)
@@ -235,7 +228,7 @@ var NEXT_SERVER_ID = 1;
             .forEach(function(conf){
                 if (conf.isAdd && conf.value !== server.id) server.peers.push(conf.value);
                 else server.peers = server.peers.filter(
-                        function(srv){return srv.id !== conf.value;});
+                        function(id){return id !== conf.value;});
 
             });
     };
@@ -258,7 +251,13 @@ var NEXT_SERVER_ID = 1;
                     if (logTerm(server.log, index) != request.entries[i].term) {
                         while (server.log.length > index - 1) {
                             // TODO: if Entry is config, rollback
-                            server.log.pop();
+                            var entry = server.log.pop();
+                            if (entry.isConfig)
+                                if (entry.isAdd) {
+                                    server.peers = server.peers.filter(
+                                        function(srv){return srv !== entry.value;});
+                                    deadServersWalking[entry.value] = true;
+                                } else server.peers.push(entry.value);
                         }
                         server.log.push(request.entries[i]);
                     }
@@ -313,6 +312,7 @@ var NEXT_SERVER_ID = 1;
     };
 
 
+    var deadServersWalking = {};
     raft.update = function (model) {
         model.servers.forEach(function (server) {
             rules.startNewElection(model, server);
@@ -345,6 +345,37 @@ var NEXT_SERVER_ID = 1;
                 }
             });
         });
+
+        var n = 0;
+        $.each(deadServersWalking, function(){n++;});
+        if (n) {
+            var activeServers = {};
+            model.servers.forEach(function(srv) {
+                srv.peers.forEach(function(pear){
+                    activeServers[pear] = true;
+                });
+            });
+
+            var alive={}, dead={};
+            $.each(deadServersWalking, function(key) {
+                key = parseInt(key);
+                if (activeServers[key] !== undefined) alive[key] = true;
+                else dead[key] = true;
+            });
+            deadServersWalking = alive;
+
+            var repaint = false;
+            $.each(dead, function(key) {
+                key = parseInt(key);
+                var srv_html = $('#server-' + key);
+                model.servers = model.servers.filter(
+                    function(srv){return srv.id !== key;});
+                srv_html.remove();
+                repaint = true;
+            });
+
+            if (repaint) model.servers.forEach(graphics.realign(model.servers.length));
+        }
     };
 
     raft.stop = function (model, server) {
@@ -400,8 +431,12 @@ var NEXT_SERVER_ID = 1;
         if (id === undefined)
             id = raft.getIdAndIncrement();
 
-        if (leader && leader.configIndex <= leader.commitIndex) {
+        if (leader &&
+                leader.configIndex <= leader.commitIndex &&
+                leader.log[leader.commitIndex-1].term === leader.term) {
+
             // leader.helpCatchUp(model, leader, server);
+
             var server = raft.server(model, id);
             (function (server, peer_id) {
                 // Add peer to server

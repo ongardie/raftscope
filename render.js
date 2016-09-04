@@ -280,8 +280,7 @@ $(function () {
             var s = messageSpec(message.from, message.to,
                 (state.current.time - message.sendTime) /
                 (message.recvTime - message.sendTime));
-            $('#message-' + i + ' circle', messagesGroup)
-                .attr(s);
+            $('#message-' + i + ' circle', messagesGroup).attr(s);
             if (message.direction == 'reply') {
                 var dlist = [];
                 dlist.push('M', s.cx - s.r, comma, s.cy,
