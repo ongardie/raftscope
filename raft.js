@@ -390,7 +390,7 @@ var NEXT_SERVER_ID = 1;
     };
 
     raft.configChange = function (model, change) {
-        if (change.isAdd) raft.addServer(model);
+        if (change.isAdd) raft.addServer(model, change.value);
         else raft.removeServer(model, {id:change.value});
 
     };
