@@ -60,6 +60,10 @@ var NEXT_SERVER_ID = 1;
         return NEXT_SERVER_ID++;
     };
 
+    raft.getServerIndexById = function (model, id) {
+        return model.servers.findIndex(function(srv){return srv.id === id;});
+    };
+
     raft.server = function (model, my_id) {
         var peers = [];
         for (var i=1; i <= INITIAL_SERVER_NUMBER; i++)
@@ -178,9 +182,9 @@ var NEXT_SERVER_ID = 1;
                 if (last){
                     if (!last.isAdd) {
                         var deadServerWalking = $('#server-' + last.value);
-                        if (deadServerWalking) deadServersWalking[last.value] = true;
+                        if (deadServerWalking) model.deadServersWalking[last.value] = true;
                     } else {
-                        delete deadServersWalking[last.value];
+                        delete model.deadServersWalking[last.value];
                     }
                 }
 
@@ -260,7 +264,7 @@ var NEXT_SERVER_ID = 1;
                                 if (entry.isAdd) {
                                     server.peers = server.peers.filter(
                                         function(srv){return srv !== entry.value;});
-                                    deadServersWalking[entry.value] = true;
+                                    model.deadServersWalking[entry.value] = true;
                                 } else server.peers.push(entry.value);
                         }
                         server.log.push(request.entries[i]);
@@ -316,7 +320,6 @@ var NEXT_SERVER_ID = 1;
     };
 
 
-    var deadServersWalking = {};
     raft.update = function (model) {
         model.servers.forEach(function (server) {
             rules.startNewElection(model, server);
@@ -351,23 +354,23 @@ var NEXT_SERVER_ID = 1;
         });
 
         var n = 0;
-        $.each(deadServersWalking, function(){n++;});
+        $.each(model.deadServersWalking, function(){n++;});
         if (n) {
             var activeServers = {};
             model.servers.forEach(function(srv) {
-                if (deadServersWalking[srv.id]) return;
+                if (model.deadServersWalking[srv.id]) return;
                 srv.peers.forEach(function(pear){
                     activeServers[pear] = true;
                 });
             });
 
             var alive={}, dead={};
-            $.each(deadServersWalking, function(key) {
+            $.each(model.deadServersWalking, function(key) {
                 key = parseInt(key);
                 if (activeServers[key] !== undefined) alive[key] = true;
                 else dead[key] = true;
             });
-            deadServersWalking = alive;
+            model.deadServersWalking = alive;
 
             var repaint = false;
             $.each(dead, function(key) {
@@ -464,7 +467,7 @@ var NEXT_SERVER_ID = 1;
             // Graphics
             model.servers.forEach(graphics.realign(model.servers.length + 1));
             model.servers.push(server);
-            deadServersWalking[server.id]=true;
+            model.deadServersWalking[server.id]=true;
             graphics.get_creator(model.servers.length)(server, model.servers.length - 1);
         } else {
             model.pendingConf.push({isAdd: true, value: id});

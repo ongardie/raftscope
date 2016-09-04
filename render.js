@@ -47,14 +47,10 @@ $(function () {
         'translate(' + ringSpec.cx + ', ' + ringSpec.cy + ') ' +
         'scale(' + ringSpec.r / 3.5 + ')');
 
-    var getServerIndex = function(model, server_id) {
-        return model.servers.findIndex(function(srv){return srv.id === server_id;});
-    };
-
     var serverSpec = function (server_id, nservers) {
         nservers = nservers !== undefined ? nservers : state.current.servers.length;
 
-        var pos = getServerIndex(state.current, server_id);
+        var pos = raft.getServerIndexById(state.current, server_id);
         var coord = util.circleCoord(pos / nservers,
             ringSpec.cx, ringSpec.cy, ringSpec.r);
         return {
@@ -172,7 +168,7 @@ $(function () {
                 if (server.state == 'candidate') {
                     state.current.servers.forEach(function (peer) {
                         //var coord = util.circleCoord((peer.id - 1) / this,
-                        var coord = util.circleCoord(getServerIndex(this.model, peer.id) / this.nsrv,
+                        var coord = util.circleCoord(raft.getServerIndexById(this.model, peer.id) / this.nsrv,
                             serverSpec(server.id).cx,
                             serverSpec(server.id).cy,
                             serverSpec(server.id).r * 5 / 8);

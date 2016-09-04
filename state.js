@@ -3,6 +3,9 @@
 /* jshint devel: true */
 /* jshint jquery: true */
 /* global util */
+/* global graphics */
+/* global raft */
+/* global render */
 'use strict';
 
 var makeState = function (initial) {
@@ -24,14 +27,36 @@ var makeState = function (initial) {
         },
         fork: function () {
             var i = prev(self.current.time);
-            // NOTE: deleting forward history.
-            // TODO: save as tree
             while (checkpoints.length - 1 > i)
                 checkpoints.pop();
             maxTime = self.current.time;
         },
+        fixGraphicsOnTimeChange: function(time, current, next) {
+            var create = graphics.get_creator(next.servers.length);
+
+            // Add missing servers
+            var toAdd = util.srvArraySub(next.servers, current.servers);
+            toAdd.forEach(function(server) {
+                create(server, raft.getServerIndexById(next, server.id));
+            });
+
+            // Remove leaftovers
+            var toRem = util.srvArraySub(current.servers, next.servers);
+            console.log("TO REMOVE", toRem);
+            toRem.forEach(function(server) {
+                $('#server-' + server.id).remove();
+            });
+
+            // realing
+            next.servers.forEach(graphics.realign(next.servers.length));
+            render.update();
+
+        },
         rewind: function (time) {
-            self.current = util.clone(checkpoints[prev(time)]);
+            // HANDLE: graphics changes
+            var next = util.clone(checkpoints[prev(time)]);
+            self.fixGraphicsOnTimeChange(time, self.current, next);
+            self.current = next;
             self.current.time = time;
         },
         base: function () {

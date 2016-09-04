@@ -18,6 +18,7 @@ $(function () {
         servers: [],
         messages: [],
         pendingConf: [],
+        deadServersWalking: {},
         channelNoise: 0,
     });
 

@@ -138,3 +138,12 @@ util.relativeTime = function (time, now) {
 util.getButton = function (label) {
     return $('<button type="button" class="btn btn-default"></button>').text(label);
 };
+
+util.srvArraySub = function(a, b) {
+    var base = {};
+    b.forEach(function(srv){base[srv.id]=true;});
+    return a.filter(function(srv){
+        console.log(srv.id);
+        return base[srv.id] === undefined;
+    });
+};
