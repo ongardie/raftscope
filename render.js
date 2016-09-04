@@ -305,9 +305,13 @@ $(function () {
     render.logsTable = function (model) {
         var max_log_len = Math.max.apply(null,
             model.servers.map(function(server) {return server.log.length;})),
-            req_log_len = Math.max(DISPLAY_LE_CURRENT, DISPLAY_INITIAL_LE, max_log_len + DISPLAY_MIN_EMPTY_LE);
-        if (req_log_len > DISPLAY_LE_CURRENT)
+            req_log_len = Math.max(DISPLAY_LE_CURRENT, DISPLAY_INITIAL_LE, max_log_len + DISPLAY_MIN_EMPTY_LE),
+            scroll = false;
+
+        if (req_log_len > DISPLAY_LE_CURRENT) {
             DISPLAY_LE_CURRENT += DISPLAY_LE_EXTEND;
+            scroll = true;
+        }
 
 
         var cnt = $("#log-div");
@@ -342,7 +346,15 @@ $(function () {
                             }
                             Array.prototype.push.apply(line, [
                                 '">',
-                                array_id < server.log.length ? server.log[array_id].term : '',
+                                (array_id >= server.log.length ? '' : (
+                                    server.log[array_id].term +
+                                    (!server.log[array_id].isConfig ? '': (
+                                        'C<sub>' +
+                                        (server.log[array_id].isAdd ? '+' : '-') +
+                                        'S' + server.log[array_id].value +
+                                        '</sub>'
+                                    ))
+                                )),
                                 '</td>',
                             ]);
                         }
@@ -365,7 +377,7 @@ $(function () {
             }
         });
 
-        cnt.scrollLeft(cnt.width());
+        if (scroll) cnt.scrollLeft(cnt.width());
     };
 
     render.pendingTable = function(model) {
@@ -630,7 +642,7 @@ $(function () {
         } else if (message.type == 'AppendEntries') {
             if (message.direction == 'request') {
                 var entries = '[' + message.entries.map(function (e) {
-                        return e.term;
+                        return '(' + e.term + (e.isConfig ? ( ',' + (e.isAdd ? '+':'-') +'S'+ e.value) : '') + ')';
                     }).join(' ') + ']';
                 fields.append(li('prevIndex', message.prevIndex));
                 fields.append(li('prevTerm', message.prevTerm));

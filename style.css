@@ -240,18 +240,21 @@ a#time-button {
   padding-bottom: 10px;
 }
 
-table#log-table {
+#log-table {
   border-collapse: separate;
   border-spacing: 1px;
   min-width: 100%;
 }
+
 #log-table th, #log-table td {
   border: 2px solid #efefef;
   width: 36px;
   padding: 4px 2px 4px 2px;
   text-align: center;
   position: relative;
+  white-space: nowrap;
 }
+
 #log-table tr *:first-child {text-align: left}
 #log-table td.leader {color: red;}
 #log-table td.committed, #log-table td.uncommitted {
@@ -261,17 +264,17 @@ table#log-table {
 #log-table td.uncommitted {border-color:#fff; border-style: dashed;}
 
 #log-table td.noop::after { content: 'N' }
-#log-table td.config::after { content: 'C' }
+/* #log-table td.config::after { content: 'C' } */
+#log-table td.config > small {  }
 
 .mustScroll {overflow-x: scroll;}
 
-#log-table-legend {
-  font-size: 14px;
-}
 
-#legend-div{
-  padding-top: 10px;
-}
+
+#log-table-legend {font-size: 14px}
+#legend-div{padding-top: 10px}
+
+
 
 #pending-table {
   width: 100%;
