@@ -137,6 +137,10 @@ svg #pause.resumed {
 }
 
 /* darker slider backgrounds (higher contrast) */
+.row{
+  margin-left: 0px;
+  margin-right: 0px;
+}
 .slider-track {
     background-image: linear-gradient(to bottom, #c3c3c3 0%, #efefef 100%);
 }
@@ -261,22 +265,52 @@ table#log-table {
 
 .scroll {overflow-x: scroll;}
 
-#pending-table {
-  width: 100%;
-  border: solid #333;
-  overflow-x: scroll;
+#log-table-legend {
+  font-size: 14px;
 }
 
+#legend-div{
+  padding-top: 10px;
+}
+
+#pending-table {
+  width: 80%;
+  border: 1px solid gray;
+  overflow-x: scroll;
+  display: inline-block;
+}
+
+#pending-icon{
+  margin-top: -32px;
+  margin-right: 17px;
+}
 #pending-table td {
-  height: 30px;
+  height: 40px;
   width: 30px;
   min-width: 30px ;
   max-width: 30px ;
-  border: solid pink;
+  background-color: #149bdf;
+  border: 2px solid #149bdf;
+  line-height: 36px;
+  box-sizing: border-box;
+  border-collapse: inherit;
+  border-radius: 5px;
   text-align: center;
+  color: white;
 }
-#pending-table tr>td:last-child {width:auto;border: none;}
+#pending-table tr>td:last-child {
+  width:auto;
+  border: solid 2px transparent;
+  border-left: 0px;
+  border-right: 0px;
+  background-color: transparent;
+}
 
+table#pending-table{
+  border-radius: 5px;
+  border-collapse: inherit;
+  background-color: #eeeeee;
+}
 
 .matchIndex::before,
 .nextIndex::before {
@@ -314,5 +348,6 @@ table#log-table {
 
 /* nav bar */
 #sliders {margin-top: 30px}
-#sliders .row {margin-bottom: 50px; margin-right: 10%}
+#sliders .row {margin-bottom: 50px; margin-left: 10px}
 #sliders .slider.slider-horizontal {width: 80%}
+

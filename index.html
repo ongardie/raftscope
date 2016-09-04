@@ -57,7 +57,7 @@
             </nav>
             <div class="row" style="margin-top: 20px">
                 <div class="col-sm-6">
-                    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="450" height="430" style="padding-left:10px">
+                    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="450" height="430">
                         <defs>
                             <marker id="TriangleOutM" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
                                 <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z"
@@ -83,41 +83,70 @@
                         <g id="servers"></g>
                     </svg>
                 </div>
+                <!-- slider - right side-->
                 <div class="col-sm-6" id="sliders">
                     <div class="row">
-                        <a id="time-button" href="#"><span id="time-icon" class="glyphicon glyphicon-time"
-                                                           style="font-size: 24pt; vertical-align: middle"
-                                                           data-toggle="tooltip"
-                                                           title="Timeline; click to pause/play"></span></a>
-                        &nbsp;&nbsp;
-                        <input id="time" data-slider-id='timeSlider' type="text"
-                               data-slider-min="0"
-                               data-slider-max="1000" data-slider-step="1" data-slider-value="0">
+                        <div class="col-sm-12 ">
+                            <a id="time-button" href="#"><span id="time-icon" class="glyphicon glyphicon-time"style="font-size: 24pt; vertical-align: middle"data-toggle="tooltip"title="Timeline; click to pause/play"></span></a>
+                            &nbsp;&nbsp;
+                            <input id="time" data-slider-id='timeSlider' type="text" data-slider-min="0"
+                                data-slider-max="1000" data-slider-step="1" data-slider-value="0">
+                        </div>
                     </div>
                     <div class="row">
-                        <span id="speed-icon" class="glyphicon glyphicon-dashboard"
-                              style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip"
-                              title="Simulation speed"></span>
-                        &nbsp;&nbsp;
-                        <input id="speed" data-slider-id='speedSlider' type="text" data-slider-min="0.3"
+                        <div class="col-sm-12 ">
+                            <span id="speed-icon" class="glyphicon glyphicon-dashboard"
+                                style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip"
+                                title="Simulation speed"></span>
+                                &nbsp;&nbsp;
+                                <input id="speed" data-slider-id='speedSlider' type="text" data-slider-min="0.3"
                                data-slider-max="3" data-slider-step=".01" data-slider-value="2">
+                        </div>
                     </div>
                     <div class="row">
-                        <span id="channel-noise-icon" class="glyphicon glyphicon-flash"
-                              style="font-size: 24pt; vertical-align: middle"
-                              data-toggle="tooltip" title="Channel noise"></span>
-                        &nbsp;&nbsp;
-                        <input id="channel-noise" data-slider-id='noiseSlider' type="text"
-                               data-slider-min="0" data-slider-max="1" data-slider-step=".001" data-slider-value="0">
+                        <div class="col-sm-12 ">
+                            <span id="channel-noise-icon" class="glyphicon glyphicon-flash"
+                                style="font-size: 24pt; vertical-align: middle"
+                                data-toggle="tooltip" title="Channel noise"></span>
+                            &nbsp;&nbsp;
+                            <input id="channel-noise" data-slider-id='noiseSlider' type="text"
+                                data-slider-min="0" data-slider-max="1" data-slider-step=".001" data-slider-value="0">
+                        </div>
                     </div>
                     <div class="row">
                       <div class="col-sm-12 scroll">
+                        <p>Server pending request</p>
+                         <span id="pending-icon"class="glyphicon glyphicon-tasks"
+                                style="font-size: 24pt; vertical-align: middle"
+                                data-toggle="tooltip" title="Pending request"></span>
                         <table id="pending-table"><tr id="pending-queue"></tr></table>
                       </div>
                   </div>
                 </div>
+                <!-- /.slider - right side-->
             </div>
-            <div class="row"><div class="col-sm-12" id="log-div"><!-- Log table --></div></div>
+            <div class="row">
+                <div class="col-sm-12" id="legend-div">
+                    <fieldset>
+                        <legend>Log Server Table</legend>
+                        <div class="row" id="log-table-legend">
+                            <div class="col-sm-3">
+                                <label>N</label> <p>No operation</p>
+                            </div>
+                            <div class="col-sm-3">
+                                <label>C</label> <p>Configuration change</p>
+                            </div>
+                            <div class="col-sm-3">
+                                <label>&#9679;</label><p>Match index</p>
+                            </div>
+                            <div class="col-sm-3">
+                                <label>&#9650;</label><p>Next index</p>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <div class="col-sm-12" id="log-div"><!-- Log table --></div></div>
         </div>
         <div id="modal-details" class="modal" tabindex="-1" data-keyboard="true">
             <div class="modal-dialog">
