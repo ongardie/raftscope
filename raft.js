@@ -80,6 +80,9 @@ var NEXT_SERVER_ID = 1;
             commitIndex: 0,
             configIndex: 0,
             electionAlarm: makeElectionAlarm(model.time),
+            // Section 4.2.3
+            // Negative value does not impede first round of votes.
+            lastHeartbeat: - ELECTION_TIMEOUT,
         };
     };
 
@@ -204,12 +207,19 @@ var NEXT_SERVER_ID = 1;
         if (server.term < request.term)
             stepDown(model, server, request.term);
         var granted = false;
-        if (server.term == request.term &&
-            (server.votedFor === null ||
-            server.votedFor == request.from) &&
-            (request.lastLogTerm > logTerm(server.log, server.log.length) ||
-            (request.lastLogTerm == logTerm(server.log, server.log.length) &&
-            request.lastLogIndex >= server.log.length))) {
+        if (
+                server.term == request.term &&
+                model.time - server.lastHeartbeat >= ELECTION_TIMEOUT &&
+                (server.votedFor === null || server.votedFor == request.from) &&
+                (
+                    request.lastLogTerm > logTerm(server.log, server.log.length) ||
+                    (
+                        request.lastLogTerm == logTerm(server.log, server.log.length) &&
+                        request.lastLogIndex >= server.log.length
+                    )
+                )
+            )
+        {
             granted = true;
             server.votedFor = request.from;
             server.electionAlarm = makeElectionAlarm(model.time);
@@ -249,6 +259,7 @@ var NEXT_SERVER_ID = 1;
         if (server.term == request.term) {
             server.state = 'follower';
             server.electionAlarm = makeElectionAlarm(model.time);
+            server.lastHeartbeat = model.time;
             if (request.prevIndex === 0 ||
                 (request.prevIndex <= server.log.length &&
                 logTerm(server.log, request.prevIndex) == request.prevTerm)) {
