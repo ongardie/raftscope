@@ -175,9 +175,13 @@ var NEXT_SERVER_ID = 1;
             if (server.configIndex <= server.commitIndex && server.log[server.commitIndex - 1].term === server.term) {
                 // if srv to remove: remove
                 var last = server.log[server.configIndex - 1];
-                if (last && !last.isAdd) {
-                    var deadServerWalking = $('#server-' + last.value);
-                    if (deadServerWalking) deadServersWalking[last.value] = true;
+                if (last){
+                    if (!last.isAdd) {
+                        var deadServerWalking = $('#server-' + last.value);
+                        if (deadServerWalking) deadServersWalking[last.value] = true;
+                    } else {
+                        delete deadServersWalking[last.value];
+                    }
                 }
 
                 if (model.pendingConf.length)
@@ -351,6 +355,7 @@ var NEXT_SERVER_ID = 1;
         if (n) {
             var activeServers = {};
             model.servers.forEach(function(srv) {
+                if (deadServersWalking[srv.id]) return;
                 srv.peers.forEach(function(pear){
                     activeServers[pear] = true;
                 });
@@ -428,11 +433,11 @@ var NEXT_SERVER_ID = 1;
 
     raft.addServer = function(model, id) {
         var leader = raft.getLeader(model);
-        if (id === undefined)
-            id = raft.getIdAndIncrement();
+        if (id === undefined) id = raft.getIdAndIncrement();
 
         if (leader &&
                 leader.configIndex <= leader.commitIndex &&
+                leader.commitIndex &&
                 leader.log[leader.commitIndex-1].term === leader.term) {
 
             // leader.helpCatchUp(model, leader, server);
@@ -459,6 +464,7 @@ var NEXT_SERVER_ID = 1;
             // Graphics
             model.servers.forEach(graphics.realign(model.servers.length + 1));
             model.servers.push(server);
+            deadServersWalking[server.id]=true;
             graphics.get_creator(model.servers.length)(server, model.servers.length - 1);
         } else {
             model.pendingConf.push({isAdd: true, value: id});
@@ -473,6 +479,7 @@ var NEXT_SERVER_ID = 1;
 
         if (leader &&
                 leader.configIndex <= leader.commitIndex &&
+                leader.commitIndex &&
                 leader.log[leader.commitIndex-1].term === leader.term) {
 
             // Remove from leader
