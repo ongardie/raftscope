@@ -471,7 +471,9 @@ var NEXT_SERVER_ID = 1;
         // If server the server has already been removed (find returned -1), do not create a log entry
         if (model.servers.findIndex(function(srv){return srv.id === server.id;}) < 0) return;
 
-        if (leader && leader.configIndex <= leader.commitIndex) {
+        if (leader &&
+                leader.configIndex <= leader.commitIndex &&
+                leader.log[leader.commitIndex-1].term === leader.term) {
 
             // Remove from leader
             (function (server, peer_id) {
