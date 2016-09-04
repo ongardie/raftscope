@@ -160,29 +160,27 @@ $(function () {
     });
 
     raft.spreadTimers = function (model) {
+        console.log("SPREAD");
+
         var timers = [];
         model.servers.forEach(function (server) {
             if (server.electionAlarm > model.time &&
                 server.electionAlarm < util.Inf) {
-                timers.push(server.electionAlarm);
+                timers.push({timeout: server.electionAlarm, server: server});
             }
         });
-        timers.sort(util.numericCompare);
+        timers.sort(function(a, b){return a.timeout - b.timeout;});
+
         if (timers.length > 1 &&
-            timers[1] - timers[0] < MAX_RPC_LATENCY) {
-            if (timers[0] > model.time + MAX_RPC_LATENCY) {
-                model.servers.forEach(function (server) {
-                    if (server.electionAlarm == timers[0]) {
-                        server.electionAlarm -= MAX_RPC_LATENCY;
-                        console.log('adjusted S' + server.id + ' timeout forward');
-                    }
-                });
+                timers[1].timeout - timers[0].timeout < MAX_RPC_LATENCY)
+        {
+            if (timers[0].timeout > model.time + MAX_RPC_LATENCY) {
+                timers[0].server.electionAlarm -= MAX_RPC_LATENCY;
             } else {
                 model.servers.forEach(function (server) {
-                    if (server.electionAlarm > timers[0] &&
-                        server.electionAlarm < timers[0] + MAX_RPC_LATENCY) {
+                    if (server.electionAlarm > timers[0].timeout &&
+                            server.electionAlarm < timers[0].timeout + MAX_RPC_LATENCY) {
                         server.electionAlarm += MAX_RPC_LATENCY;
-                        console.log('adjusted S' + server.id + ' timeout backward');
                     }
                 });
             }
@@ -202,7 +200,6 @@ $(function () {
         model.servers.forEach(function (server) {
             if (server.electionAlarm == timers[1]) {
                 server.electionAlarm = timers[0];
-                console.log('adjusted S' + server.id + ' timeout forward');
             }
         });
     };
