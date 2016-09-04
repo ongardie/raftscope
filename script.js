@@ -9,7 +9,7 @@
 'use strict';
 
 var state;
-var INITIAL_SERVER_NUMBER = 5;
+var INITIAL_SERVER_NUMBER = 4;
 
 $(function () {
 

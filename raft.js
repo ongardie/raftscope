@@ -118,7 +118,7 @@ var NEXT_SERVER_ID = 1;
 
     rules.becomeLeader = function (model, server) {
         if (server.state == 'candidate' &&
-            util.countTrue(util.mapValues(server.voteGranted)) + 1 > Math.floor(model.servers.length / 2)) {
+            util.countTrue(util.mapValues(server.voteGranted)) + 1 >= Math.floor((server.peers.length + 1) / 2) + 1) {
             server.state = 'leader';
 
             // Build stats table
@@ -165,16 +165,16 @@ var NEXT_SERVER_ID = 1;
     };
 
     rules.advanceCommitIndex = function (model, server) {
-        var quorum = Math.floor(server.peers.length  / 2) + 1;
+        var quorum = Math.floor((server.peers.length + 1)/ 2) + 1;
 
         var mi = util.clone(server.matchIndex);
         mi[server.id] = server.log.length;
         var n = $.map(mi, function(val) {return parseInt(val);})
-                 .sort(function(a,b){return b-a;})[quorum];
+                 .sort(function(a,b){return b-a;})[quorum - 1];
 
         if (logTerm(server.log, n) == server.term) {
             server.commitIndex = Math.max(server.commitIndex, n);
-            if (server.configIndex <= server.commitIndex) {
+            if (server.configIndex <= server.commitIndex && server.log[server.commitIndex - 1].term === server.term) {
                 // if srv to remove: remove
                 var last = server.log[server.configIndex - 1];
                 if (last && !last.isAdd) {
@@ -413,7 +413,6 @@ var NEXT_SERVER_ID = 1;
 
                 server.peers.push(peer_id);
             })(leader, server.id);
-
             leader.log.push({
                 term: leader.term,
                 value: server.id,
@@ -433,6 +432,10 @@ var NEXT_SERVER_ID = 1;
 
     raft.removeServer = function (model, server) {
         var leader = raft.getLeader(model);
+
+        // If server the server has already been removed (find returned -1), do not create a log entry
+        if (model.servers.findIndex(function(srv){return srv.id === server.id;}) < 0) return;
+
         if (leader && leader.configIndex <= leader.commitIndex) {
 
             // Remove from leader
