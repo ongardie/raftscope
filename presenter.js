@@ -129,14 +129,24 @@ $(function () {
         } else if (e.keyCode == 107 || e.keyCode == 221) { /* numpad + and keyboard ] */
             speedSlider.slider('setValue', util.clamp(speedSlider.slider('getValue') - 0.3, 0, 3));
             render.update();
+            $('.modal').modal('hide');
             processed=true;
         } else if (e.keyCode == 109 || e.keyCode == 219 ) { /* numpad - and keyboard [ */
             speedSlider.slider('setValue', util.clamp(speedSlider.slider('getValue') + 0.3, 0, 3));
             render.update();
+            $('.modal').modal('hide');
             processed=true;
         } else if (e.keyCode == 'N'.charCodeAt(0)) {
             speedSlider.slider('setValue', 2.0);
             render.update();
+            $('.modal').modal('hide');
+            processed=true;
+        } else if (e.keyCode == 'G'.charCodeAt(0)) {
+            state.fork();
+            raft.addServer(state.current);
+            state.save();
+            render.update();
+            $('.modal').modal('hide');
             processed=true;
         }
         // else if (e.keyCode == 'J'.charCodeAt(0)) {
