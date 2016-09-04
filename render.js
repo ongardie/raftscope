@@ -47,9 +47,15 @@ $(function () {
         'translate(' + ringSpec.cx + ', ' + ringSpec.cy + ') ' +
         'scale(' + ringSpec.r / 3.5 + ')');
 
-    var serverSpec = function (id, nservers) {
+    var getServerIndex = function(model, server_id) {
+        return model.servers.findIndex(function(srv){return srv.id === server_id;});
+    };
+
+    var serverSpec = function (server_id, nservers) {
         nservers = nservers !== undefined ? nservers : state.current.servers.length;
-        var coord = util.circleCoord((id - 1) / nservers,
+
+        var pos = getServerIndex(state.current, server_id);
+        var coord = util.circleCoord(pos / nservers,
             ringSpec.cx, ringSpec.cy, ringSpec.r);
         return {
             cx: coord.x,
@@ -165,7 +171,8 @@ $(function () {
                 votesGroup.empty();
                 if (server.state == 'candidate') {
                     state.current.servers.forEach(function (peer) {
-                        var coord = util.circleCoord((peer.id - 1) / this,
+                        //var coord = util.circleCoord((peer.id - 1) / this,
+                        var coord = util.circleCoord(getServerIndex(this.model, peer.id) / this.nsrv,
                             serverSpec(server.id).cx,
                             serverSpec(server.id).cy,
                             serverSpec(server.id).r * 5 / 8);
@@ -185,7 +192,7 @@ $(function () {
                                     r: 5,
                                 })
                                 .attr('class', state));
-                    }, state.current.servers.length);
+                    }, {model: state.current, nsrv: state.current.servers.length});
                 }
                 serverNode
                     .unbind('click')
@@ -536,6 +543,7 @@ $(function () {
         ['restart', raft.restart],
         ['time out', raft.timeout],
         ['request', raft.clientRequest],
+        ['remove', raft.removeServer],
     ];
 
     var messageActions = [
@@ -559,6 +567,7 @@ $(function () {
                 .append(li('electionAlarm', util.relativeTime(server.electionAlarm, model.time)))
             );
         if (server.state === 'leader' || server.state === "candidate") {
+            // TODO: fix me: show only essential field (see raft method)
             var peerTable = $('<table></table>')
                 .addClass('table table-condensed')
                 .append($('<tr></tr>')
