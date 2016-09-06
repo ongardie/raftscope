@@ -473,7 +473,7 @@ $(function () {
     speedSlider = $('#speed');
     speedSlider.slider({
         tooltip: 'always',
-        formater: function (value) {
+        formatter: function (value) {
             return '1/' + util.speedSliderTransform(value).toFixed(0) + 'x';
         },
         reversed: true,
@@ -482,7 +482,7 @@ $(function () {
     var timeSlider = $('#time');
     timeSlider.slider({
         tooltip: 'always',
-        formater: function (value) {
+        formatter: function (value) {
             return (value / 1e6).toFixed(3) + 's';
         },
     });
@@ -517,7 +517,7 @@ $(function () {
     var noiseSlider = $('#channel-noise');
     noiseSlider.slider({
         tooltip: 'always',
-        formater: function (value) {
+        formatter: function (value) {
             return (value * 100).toFixed(1) + '%';
         }
     });
