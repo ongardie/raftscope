@@ -399,6 +399,7 @@ var NEXT_SERVER_ID = 1;
     raft.stop = function (model, server) {
         server.state = 'stopped';
         server.electionAlarm = 0;
+        server.commitIndex = 0;
     };
 
     raft.resume = function (model, server) {
