@@ -574,28 +574,35 @@ $(function () {
                 .append(li('commitIndex', server.commitIndex))
                 .append(li('electionAlarm', util.relativeTime(server.electionAlarm, model.time)))
             );
-        if (server.state === 'leader' || server.state === "candidate") {
+        var isLeader = server.state === 'leader';
+        if (isLeader || server.state === "candidate") {
             // TODO: fix me: show only essential field (see raft method)
-            var peerTable = $('<table></table>')
-                .addClass('table table-condensed')
-                .append($('<tr></tr>')
-                    .append('<th>peer</th>')
+            var tableHeader = $('<tr></tr>');
+            var peerTable = $('<table></table>');
+            peerTable.addClass('table table-condensed');
+            tableHeader.append('<th>peer</th>');
+            if (isLeader)
+                tableHeader
                     .append('<th>next index</th>')
-                    .append('<th>match index</th>')
-                    .append('<th>vote granted</th>')
-                    .append('<th>RPC due</th>')
-                    .append('<th>heartbeat due</th>')
-                );
+                    .append('<th>match index</th>');
+            tableHeader
+                .append('<th>vote granted</th>')
+                .append('<th>RPC due</th>');
+            if (isLeader) tableHeader.append('<th>heartbeat due</th>');
+            peerTable.append(tableHeader);
             server.peers.forEach(function (peer) {
-                peerTable.append($('<tr></tr>')
-                    .append('<td>S' + peer + '</td>')
-                    .append('<td>' + server.nextIndex[peer] + '</td>')
-                    .append('<td>' + server.matchIndex[peer] + '</td>')
+                var tableRow = $('<tr></tr>');
+                tableRow.append('<td>S' + peer + '</td>')
+                if (isLeader)
+                    tableRow
+                        .append('<td>' + server.nextIndex[peer] + '</td>')
+                        .append('<td>' + server.matchIndex[peer] + '</td>');
+                tableRow
                     .append('<td>' + server.voteGranted[peer] + '</td>')
                     //  Dirty hack to replace negative timers from being displayed in rpcDue
-                    .append('<td>' + util.relativeTime(server.rpcDue[peer] === 0 ? util.Inf : server.rpcDue[peer], model.time) + '</td>')
-                    .append('<td>' + util.relativeTime(server.heartbeatDue[peer], model.time) + '</td>')
-                );
+                    .append('<td>' + util.relativeTime(server.rpcDue[peer] === 0 ? util.Inf : server.rpcDue[peer], model.time) + '</td>');
+                if (isLeader) tableRow.append('<td>' + util.relativeTime(server.heartbeatDue[peer], model.time) + '</td>');
+                peerTable.append(tableRow);
             });
             $('.modal-body dl', m)
                 .append($('<dt>peers</dt>'))
