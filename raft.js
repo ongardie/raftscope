@@ -94,6 +94,7 @@ var NEXT_SERVER_ID = 1;
         if (server.electionAlarm <= model.time || server.electionAlarm == util.Inf) {
             server.electionAlarm = makeElectionAlarm(model.time);
         }
+        server.lastHeartbeat = 0;
     };
 
     rules.startNewElection = function (model, server) {
@@ -134,8 +135,6 @@ var NEXT_SERVER_ID = 1;
             server.rpcDue = util.makeMap(server.peers, util.Inf);
             server.heartbeatDue = util.makeMap(server.peers, 0);
             server.electionAlarm = util.Inf;
-            server.lastHeartbeat = util.Inf;
-
             server.log.push({
                 term: server.term,
                 isNoop: true,
@@ -167,6 +166,9 @@ var NEXT_SERVER_ID = 1;
             });
             server.rpcDue[peer] = model.time + RPC_TIMEOUT;
             server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
+
+            // 4.2.3: This is needed to prevent the leader to reply to disruptive servers
+            server.lastHeartbeat = model.time;
         }
     };
 
@@ -198,12 +200,6 @@ var NEXT_SERVER_ID = 1;
                     raft.configChange(model, model.pendingConf.shift());
             }
         }
-    };
-
-    rules.helpCatchUp = function (model, leader, server) {
-        // TODO: implement me
-        console.error("Not yet implemented");
-        return;
     };
 
     var handleRequestVoteRequest = function (model, server, request) {
