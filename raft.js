@@ -134,6 +134,7 @@ var NEXT_SERVER_ID = 1;
             server.rpcDue = util.makeMap(server.peers, util.Inf);
             server.heartbeatDue = util.makeMap(server.peers, 0);
             server.electionAlarm = util.Inf;
+            server.lastHeartbeat = util.Inf;
 
             server.log.push({
                 term: server.term,
@@ -185,6 +186,8 @@ var NEXT_SERVER_ID = 1;
                 if (last){
                     if (!last.isAdd) {
                         var deadServerWalking = $('#server-' + last.value);
+                        // If I am committing a removal entry of myself, clear the pending configurations
+                        if (last.value == server.id) model.pendingConf = [];
                         if (deadServerWalking) model.deadServersWalking[last.value] = true;
                     } else {
                         delete model.deadServersWalking[last.value];
@@ -204,12 +207,12 @@ var NEXT_SERVER_ID = 1;
     };
 
     var handleRequestVoteRequest = function (model, server, request) {
-        if (server.term < request.term)
-            stepDown(model, server, request.term);
-        var granted = false;
-        if (
+        if (model.time - server.lastHeartbeat >= ELECTION_TIMEOUT) {
+            var granted = false;
+            if (server.term < request.term)
+                stepDown(model, server, request.term);
+            if (
                 server.term == request.term &&
-                model.time - server.lastHeartbeat >= ELECTION_TIMEOUT &&
                 (server.votedFor === null || server.votedFor == request.from) &&
                 (
                     request.lastLogTerm > logTerm(server.log, server.log.length) ||
@@ -218,16 +221,16 @@ var NEXT_SERVER_ID = 1;
                         request.lastLogIndex >= server.log.length
                     )
                 )
-            )
-        {
-            granted = true;
-            server.votedFor = request.from;
-            server.electionAlarm = makeElectionAlarm(model.time);
+            ) {
+                granted = true;
+                server.votedFor = request.from;
+                server.electionAlarm = makeElectionAlarm(model.time);
+            }
+            sendReply(model, request, {
+                term: server.term,
+                granted: granted,
+            });
         }
-        sendReply(model, request, {
-            term: server.term,
-            granted: granted,
-        });
     };
 
     var handleRequestVoteReply = function (model, server, reply) {
@@ -370,8 +373,8 @@ var NEXT_SERVER_ID = 1;
             var activeServers = {};
             model.servers.forEach(function(srv) {
                 if (model.deadServersWalking[srv.id]) return;
-                srv.peers.forEach(function(pear){
-                    activeServers[pear] = true;
+                srv.peers.forEach(function(peer){
+                    activeServers[peer] = true;
                 });
             });
 
@@ -488,7 +491,7 @@ var NEXT_SERVER_ID = 1;
     raft.removeServer = function (model, server) {
         var leader = raft.getLeader(model);
 
-        // If server the server has already been removed (find returned -1), do not create a log entry
+        // If the server has already been removed (find returned -1), do not create a log entry
         if (model.servers.findIndex(function(srv){return srv.id === server.id;}) < 0) return;
 
         if (leader &&
