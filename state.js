@@ -40,14 +40,13 @@ var makeState = function (initial) {
                 create(server, raft.getServerIndexById(next, server.id));
             });
 
-            // Remove leaftovers
+            // Remove leftovers
             var toRem = util.srvArraySub(current.servers, next.servers);
-            console.log("TO REMOVE", toRem);
             toRem.forEach(function(server) {
                 $('#server-' + server.id).remove();
             });
 
-            // realing
+            // realign
             next.servers.forEach(graphics.realign(next.servers.length));
             render.update();
 
@@ -102,13 +101,12 @@ var makeState = function (initial) {
             self.current = util.clone(checkpoints[0]);
             self.current.time = 0;
         },
-        // TODO: fix me
-        // clear: function () {
-        //     checkpoints = [];
-        //     self.current = initial;
-        //     self.current.time = 0;
-        //     maxTime = 0;
-        // },
+        clear: function () {
+            checkpoints = [];
+            self.current = initial;
+            self.current.time = 0;
+            maxTime = 0;
+        },
     };
     self.current.time = 0;
     return self;

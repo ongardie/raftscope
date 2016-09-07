@@ -143,7 +143,6 @@ util.srvArraySub = function(a, b) {
     var base = {};
     b.forEach(function(srv){base[srv.id]=true;});
     return a.filter(function(srv){
-        console.log(srv.id);
         return base[srv.id] === undefined;
     });
 };

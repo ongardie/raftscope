@@ -6,6 +6,10 @@
 /* global makeState */
 /* global render */
 /* global graphics */
+/* global playback */
+/* global presenter */
+/* global util */
+/* global speedSlider */
 'use strict';
 
 var state;
@@ -36,5 +40,28 @@ $(function () {
     // $('[data-toggle="tooltip"]').tooltip();
 
     state.init();
-    render.update();
+
+    // This is the main function which determines each tick in the simulation
+    (function () {
+        var last = null;
+        var step = function (timestamp) {
+            if (!playback.isPaused() && last !== null && timestamp - last < 500) {
+                var wallMicrosElapsed = (timestamp - last) * 1000;
+                var speed = util.speedSliderTransform(speedSlider.slider('getValue'));
+                var modelMicrosElapsed = wallMicrosElapsed / speed;
+                var modelMicros = state.current.time + modelMicrosElapsed;
+                state.seek(modelMicros);
+                if (modelMicros >= state.getMaxTime() && presenter.recorder.onReplayDone !== undefined) {
+                    var f = presenter.recorder.onReplayDone;
+                    presenter.recorder.onReplayDone = undefined;
+                    f();
+                }
+                render.update();
+            }
+            last = timestamp;
+            window.requestAnimationFrame(step);
+        };
+        window.requestAnimationFrame(step);
+    })();
+
 });

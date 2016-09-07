@@ -419,6 +419,7 @@ $(function () {
         lastRenderedO = state;
         lastRenderedV = state.base();
         render.updateTimeSlider();
+        render.updateNoiseSlider();
         render.servers(serversSame);
         render.messages(messagesSame);
         if (!serversSame)
@@ -511,9 +512,11 @@ $(function () {
     };
 
     render.updateNoiseSlider = function () {
-        noiseSlider.slider('setValue', state.current.channelNoise, false);
+        if (!settingNoise){
+            noiseSlider.slider('setValue', state.current.channelNoise, false);
+        }
     };
-
+    var settingNoise = false;
     var noiseSlider = $('#channel-noise');
     noiseSlider.slider({
         tooltip: 'always',
@@ -521,9 +524,13 @@ $(function () {
             return (value * 100).toFixed(1) + '%';
         }
     });
+    noiseSlider.on('slideStart', function () {
+        settingNoise = true;
+    });
     noiseSlider.on("slideStop", function () {
         state.fork();
-        state.current.channelNoise = parseFloat(noiseSlider.val());
+        settingNoise = false;
+        state.current.channelNoise = noiseSlider.slider('getValue');
         state.save();
         render.update();
     });
@@ -576,7 +583,6 @@ $(function () {
             );
         var isLeader = server.state === 'leader';
         if (isLeader || server.state === "candidate") {
-            // TODO: fix me: show only essential field (see raft method)
             var tableHeader = $('<tr></tr>');
             var peerTable = $('<table></table>');
             peerTable.addClass('table table-condensed');

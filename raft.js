@@ -268,7 +268,6 @@ var NEXT_SERVER_ID = 1;
                     index += 1;
                     if (logTerm(server.log, index) != request.entries[i].term) {
                         while (server.log.length > index - 1) {
-                            // TODO: if Entry is config, rollback
                             var entry = server.log.pop();
                             if (entry.isConfig)
                                 if (entry.isAdd) {
@@ -453,8 +452,6 @@ var NEXT_SERVER_ID = 1;
                 leader.configIndex <= leader.commitIndex &&
                 leader.commitIndex &&
                 leader.log[leader.commitIndex-1].term === leader.term) {
-
-            // leader.helpCatchUp(model, leader, server);
 
             var server = raft.server(model, id);
             (function (server, peer_id) {

@@ -27,28 +27,6 @@ $(function () {
         presenter.recorder.onReplayDone = done;
     };
 
-    (function () {
-        var last = null;
-        var step = function (timestamp) {
-            if (!playback.isPaused() && last !== null && timestamp - last < 500) {
-                var wallMicrosElapsed = (timestamp - last) * 1000;
-                var speed = util.speedSliderTransform(speedSlider.slider('getValue'));
-                var modelMicrosElapsed = wallMicrosElapsed / speed;
-                var modelMicros = state.current.time + modelMicrosElapsed;
-                state.seek(modelMicros);
-                if (modelMicros >= state.getMaxTime() && presenter.recorder.onReplayDone !== undefined) {
-                    var f = presenter.recorder.onReplayDone;
-                    presenter.recorder.onReplayDone = undefined;
-                    f();
-                }
-                render.update();
-            }
-            last = timestamp;
-            window.requestAnimationFrame(step);
-        };
-        window.requestAnimationFrame(step);
-    })();
-
     $("#help").click(function () {
         playback.pause();
         $('#modal-help').modal('show');
@@ -68,7 +46,7 @@ $(function () {
         if (e.keyCode == ' '.charCodeAt(0) || e.keyCode == 190 /* dot, emitted by Logitech remote */) {
             $('.modal').modal('hide');
             playback.toggle();
-            processed=true;
+            processed = true;
         } else if (e.keyCode == 'C'.charCodeAt(0)) {
             if (leader !== null) {
                 state.fork();
@@ -77,7 +55,7 @@ $(function () {
                 render.update();
                 $('.modal').modal('hide');
             }
-            processed=true;
+            processed = true;
         } else if (e.keyCode == 'R'.charCodeAt(0)) {
             if (leader !== null) {
                 state.fork();
@@ -87,21 +65,21 @@ $(function () {
                 render.update();
                 $('.modal').modal('hide');
             }
-            processed=true;
+            processed = true;
         } else if (e.keyCode == 'T'.charCodeAt(0)) {
             state.fork();
             raft.spreadTimers(state.current);
             state.save();
             render.update();
             $('.modal').modal('hide');
-            processed=true;
+            processed = true;
         } else if (e.keyCode == 'A'.charCodeAt(0)) {
             state.fork();
             raft.alignTimers(state.current);
             state.save();
             render.update();
             $('.modal').modal('hide');
-            processed=true;
+            processed = true;
         } else if (e.keyCode == 'L'.charCodeAt(0)) {
             state.fork();
             playback.pause();
@@ -109,45 +87,45 @@ $(function () {
             state.save();
             render.update();
             $('.modal').modal('hide');
-            processed=true;
+            processed = true;
         } else if (e.keyCode == 'B'.charCodeAt(0)) {
             state.fork();
             raft.resumeAll(state.current);
             state.save();
             render.update();
             $('.modal').modal('hide');
-            processed=true;
+            processed = true;
         } else if (e.keyCode == 'F'.charCodeAt(0)) {
             state.fork();
             render.update();
             $('.modal').modal('hide');
-            processed=true;
+            processed = true;
         } else if (e.keyCode == 191 && e.shiftKey) { /* question mark */
             playback.pause();
             $('#modal-help').modal('show');
-            processed=true;
+            processed = true;
         } else if (e.keyCode == 107 || e.keyCode == 221) { /* numpad + and keyboard ] */
             speedSlider.slider('setValue', util.clamp(speedSlider.slider('getValue') - 0.3, 0, 3));
             render.update();
             $('.modal').modal('hide');
-            processed=true;
-        } else if (e.keyCode == 109 || e.keyCode == 219 ) { /* numpad - and keyboard [ */
+            processed = true;
+        } else if (e.keyCode == 109 || e.keyCode == 219) { /* numpad - and keyboard [ */
             speedSlider.slider('setValue', util.clamp(speedSlider.slider('getValue') + 0.3, 0, 3));
             render.update();
             $('.modal').modal('hide');
-            processed=true;
+            processed = true;
         } else if (e.keyCode == 'N'.charCodeAt(0)) {
             speedSlider.slider('setValue', 2.0);
             render.update();
             $('.modal').modal('hide');
-            processed=true;
+            processed = true;
         } else if (e.keyCode == 'G'.charCodeAt(0)) {
             state.fork();
             raft.addServer(state.current);
             state.save();
             render.update();
             $('.modal').modal('hide');
-            processed=true;
+            processed = true;
         }
         // else if (e.keyCode == 'J'.charCodeAt(0)) {
         //     e.preventDefault();
@@ -169,17 +147,18 @@ $(function () {
                 timers.push({timeout: server.electionAlarm, server: server});
             }
         });
-        timers.sort(function(a, b){return a.timeout - b.timeout;});
+        timers.sort(function (a, b) {
+            return a.timeout - b.timeout;
+        });
 
         if (timers.length > 1 &&
-                timers[1].timeout - timers[0].timeout < MAX_RPC_LATENCY)
-        {
+            timers[1].timeout - timers[0].timeout < MAX_RPC_LATENCY) {
             if (timers[0].timeout > model.time + MAX_RPC_LATENCY) {
                 timers[0].server.electionAlarm -= MAX_RPC_LATENCY;
             } else {
                 model.servers.forEach(function (server) {
                     if (server.electionAlarm > timers[0].timeout &&
-                            server.electionAlarm < timers[0].timeout + MAX_RPC_LATENCY) {
+                        server.electionAlarm < timers[0].timeout + MAX_RPC_LATENCY) {
                         server.electionAlarm += MAX_RPC_LATENCY;
                     }
                 });
