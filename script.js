@@ -51,7 +51,17 @@ var SVG = function(tag) {
 
 playback = function() {
   var paused = false;
-  var pause = function() {
+  var autoPaused = false;
+  var pause = function(isAuto) {
+    if (isAuto === true) {
+      if (paused === true) {
+        // Already paused; nothing to do here.
+        return;
+      }
+      // Let's make a note that this was paused automatically, so we can
+      // also resume automatically.
+      autoPaused = true;
+    }
     paused = true;
     $('#time-icon')
       .removeClass('glyphicon-time')
@@ -59,16 +69,27 @@ playback = function() {
     $('#pause').attr('class', 'paused');
     render.update();
   };
-  var resume = function() {
-    if (paused) {
-      paused = false;
-      $('#time-icon')
-        .removeClass('glyphicon-pause')
-        .addClass('glyphicon-time');
-      $('#pause').attr('class', 'resumed');
-      render.update();
+  var resume = function(isAuto) {
+    if (!paused) {
+      // Not paused; nothing to do here.
+      return;
     }
+    if (isAuto === true) {
+      if (autoPaused !== true) {
+        // Playback was paused by the user. Let's not auto-resume.
+        return;
+      }
+      // Playback was auto-paused, so let's auto-resume
+      autoPaused = false;
+    }
+    paused = false;
+    $('#time-icon')
+      .removeClass('glyphicon-pause')
+      .addClass('glyphicon-time');
+    $('#pause').attr('class', 'resumed');
+    render.update();
   };
+  window.onblur
   return {
     pause: pause,
     resume: resume,
@@ -646,6 +667,16 @@ render.update = function() {
   };
   window.requestAnimationFrame(step);
 })();
+
+$(window).blur(function(e) {
+  // When window loses focus, auto-pause playback so we burn less cpu.
+  playback.pause(true);
+});
+
+$(window).focus(function(e) {
+  // When window acquires focus, resume playback if previously auto-paused.
+  playback.resume(true);
+});
 
 $(window).keyup(function(e) {
   if (e.target.id == "title")
