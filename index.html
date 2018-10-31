@@ -1,142 +1,254 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Raft Scope</title>
-    <link href="bootstrap-3.1.1/css/bootstrap.min.css" rel="stylesheet">
-    <link href="bootstrap-slider/css/bootstrap-slider.css" rel="stylesheet">
-    <script src="jquery/jquery.min.js"></script>
-    <script src="bootstrap-3.1.1/js/bootstrap.min.js"></script>
-    <script src="bootstrap-slider/js/bootstrap-slider.js"></script>
-    <script src="bootstrap-contextmenu/bootstrap-contextmenu.js"></script>
-    <script src="util.js"></script>
-    <script src="raft.js"></script>
-    <script src="state.js"></script>
-    <script src="script.js"></script>
-    <link href="style.css" rel="stylesheet">
-  </head>
-  <body>
-    <div class="container">
-      <div class="row" style="margin-top: 20px">
-        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style="border: 0px solid black" width="745" height="400">
-          <defs>
-            <marker id="TriangleOutM" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
-              <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.4)" />
-            </marker>
-            <marker id="TriangleOutS-RequestVote" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
-              <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)" class="message RequestVote" />
-            </marker>
-            <marker id="TriangleOutS-AppendEntries" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
-              <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)" class="message AppendEntries" />
-            </marker>
-          </defs>
-          <circle id="ring" />
-          <g id="pause" class="resumed">
-            <rect width="1" height="3" x="-1.25" y="-1.5" />
-            <rect width="1" height="3" x=".25"   y="-1.5" />
-          </g>
-          <g id="messages"></g>
-          <g id="servers"></g>
-          <g class="logs"></g>
-        </svg>
-      </div>
-      <div class="row" style="margin-top: 20px">
-        <a id="time-button" href="#"><span id="time-icon" class="glyphicon glyphicon-time" style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip" title="Timeline; click to pause/play"></span></a>
-        &nbsp;&nbsp;
-        <input id="time" style="width: 650px" data-slider-id='timeSlider' type="text" data-slider-min="0" data-slider-max="1000" data-slider-step="1" data-slider-value="0" />
-      </div>
-      <div class="row" style="margin-top: 20px">
-        <span id="speed-icon" class="glyphicon glyphicon-dashboard" style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip" title="Simulation speed"></span>
-        &nbsp;&nbsp;
-        <input id="speed" style="width: 650px"  data-slider-id='speedSlider' type="text" data-slider-min="0" data-slider-max="3" data-slider-step=".01" data-slider-value="2" />
-      </div>
-    </div>
-
-    <div id="modal-details" class="modal" tabindex="-1" data-keyboard="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-            <h4 class="modal-title"></h4>
-          </div>
-          <div class="modal-body">
-          </div>
-          <div class="modal-footer">
-          </div>
-        </div><!-- /.modal-content -->
-      </div><!-- /.modal-dialog -->
-    </div><!-- /.modal -->
-
-    <div id="modal-help" class="modal" tabindex="-1" data-keyboard="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-            <h4 class="modal-title">Keyboard shortcuts</h4>
-          </div>
-          <div class="modal-body">
-            <table class="table">
-              <tr>
-                <td><kbd>&nbsp;</kbd> / <kbd>.</kbd></td>
-                <td>Pause/unpause</td>
-              </tr>
-              <tr>
-                <td><kbd>?</kbd></td>
-                <td>Help</td>
-              </tr>
-              <tr>
-                <td><kbd>C</kbd></td>
-                <td>Submit client request to leader of highest term, if any</td>
-              </tr>
-              <tr>
-                <td><kbd>R</kbd></td>
-                <td>Restart leader of highest term, if any</td>
-              </tr>
-              <tr>
-                <td><kbd>T</kbd></td>
-                <td>Adjust election timers to avoid a split vote</td>
-              </tr>
-              <tr>
-                <td><kbd>A</kbd></td>
-                <td>Align election timers to encourage a split vote</td>
-              </tr>
-              <tr>
-                <td><kbd>L</kbd></td>
-                <td>Set up log replication start scenario</td>
-              </tr>
-              <tr>
-                <td><kbd>B</kbd></td>
-                <td>Resume all servers</td>
-              </tr>
-              <tr>
-                <td><kbd>F</kbd></td>
-                <td>Fork playback, discarding future</td>
-              </tr>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="modal-section" class="modal" tabindex="-1" data-keyboard="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-            <div class="text-center" style="padding: 200px 0">
-              <h1></h1>
-              <h2></h2>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Raft Scope</title>
+        <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+        <link href="bootstrap-slider/dist/css/bootstrap-slider.min.css" rel="stylesheet">
+        <script src="jquery/jquery.min.js"></script>
+        <script src="bootstrap/js/bootstrap.min.js"></script>
+        <script src="bootstrap-slider/dist/bootstrap-slider.min.js"></script>
+        <script src="bootstrap-contextmenu/bootstrap-contextmenu.js"></script>
+        <script src="util.js"></script>
+        <script src="state.js"></script>
+        <script src="raft.js"></script>
+        <script src="render.js"></script>
+        <script src="presenter.js"></script>
+        <script src="script.js"></script>
+        <link href="style.css" rel="stylesheet">
+    </head>
+    <body>
+        <div class="container">
+            <nav class="navbar navbar-default" style="margin-top: 20px">
+                <div class="container-fluid">
+                    <div class="navbar-header">
+                        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+                            data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                            <span class="sr-only">Toggle navigation</span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                            <span class="icon-bar"></span>
+                        </button>
+                        <a class="navbar-brand" href="#">Raft Scope</a>
+                    </div>
+                    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                        <ul class="nav navbar-nav">
+                            <li>
+                                <div class="btn-group" roles="group">
+                                    <button class="btn btn-success navbar-btn" id="add-server"><span
+                                            class="glyphicon glyphicon-plus"></span>&nbsp;Add Server
+                                    </button>
+                                </div>
+                            </li>
+                        </ul>
+                        <ul class="nav navbar-nav navbar-right">
+                            <!--<li>-->
+                                <!--<button class="btn btn-secondary navbar-btn" id="reset-simulation">Reset</button>-->
+                                <!--</li>-->
+                            <li>
+                                <p class="navbar-text" style="margin-bottom:0px; font-size: smaller">This is an updated version of RaftScope, see <a href="https://raft.github.io/">raft.github.io</a> for more information.
+                            </li>
+                            <li>
+                                <button class="btn btn-info navbar-btn" id="help"><span
+                                        class="glyphicon glyphicon-question-sign"></span>&nbsp;Help
+                                </button>
+                            </li>
+                        </ul>
+                    </div><!-- /.navbar-collapse -->
+                </div>
+            </nav>
+            <div class="row" style="margin-top: 20px">
+                <div class="col-sm-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="450" height="430">
+                        <defs>
+                            <marker id="TriangleOutM" orient="auto" refX="0.0" refY="0.0" style="overflow:visible">
+                                <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z"
+                                    transform="scale(0.4)"></path>
+                            </marker>
+                            <marker id="TriangleOutS-RequestVote" orient="auto" refX="0.0" refY="0.0"
+                                style="overflow:visible">
+                                <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)"
+                                    class="message RequestVote"></path>
+                            </marker>
+                            <marker id="TriangleOutS-AppendEntries" orient="auto" refX="0.0" refY="0.0"
+                                style="overflow:visible">
+                                <path d="M 5.77,0.0 L -2.88,5.0 L -2.88,-5.0 L 5.77,0.0 z" transform="scale(0.3)"
+                                    class="message AppendEntries"></path>
+                            </marker>
+                        </defs>
+                        <circle id="ring"></circle>
+                        <g id="pause" class="resumed">
+                            <rect width="1" height="3" x="-1.25" y="-1.5"></rect>
+                            <rect width="1" height="3" x=".25" y="-1.5"></rect>
+                        </g>
+                        <g id="messages"></g>
+                        <g id="servers"></g>
+                    </svg>
+                </div>
+                <!-- slider - right side-->
+                <div class="col-sm-6" id="sliders">
+                    <div class="row">
+                        <div class="col-sm-12 ">
+                            <a id="time-button" href="#"><span id="time-icon" class="glyphicon glyphicon-time"style="font-size: 24pt; vertical-align: middle"data-toggle="tooltip"title="Timeline; click to pause/play"></span></a>
+                            &nbsp;&nbsp;
+                            <input id="time" data-slider-id='timeSlider' type="text" data-slider-min="0"
+                            data-slider-max="1000" data-slider-step="1" data-slider-value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12 ">
+                            <span id="speed-icon" class="glyphicon glyphicon-dashboard"
+                                style="font-size: 24pt; vertical-align: middle" data-toggle="tooltip"
+                                title="Simulation speed"></span>
+                            &nbsp;&nbsp;
+                            <input id="speed" data-slider-id='speedSlider' type="text" data-slider-min="0.3"
+                            data-slider-max="3" data-slider-step=".01" data-slider-value="2">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12 ">
+                            <span id="channel-noise-icon" class="glyphicon glyphicon-flash"
+                                style="font-size: 24pt; vertical-align: middle"
+                                data-toggle="tooltip" title="Channel noise"></span>
+                            &nbsp;&nbsp;
+                            <input id="channel-noise" data-slider-id='noiseSlider' type="text"
+                            data-slider-min="0" data-slider-max="1" data-slider-step=".001" data-slider-value="0">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-12">
+                            <p>Pending cluster change requests</p>
+                            <div class="row">
+                                <div class="col-xs-1 logh" style="padding-left:0;">
+                                    <i id="pending-icon"class="glyphicon glyphicon-tasks"
+                                        style="font-size: 24pt; vertical-align: middle"
+                                        data-toggle="tooltip" title="Pending request">&nbsp;</i>
+                                </div>
+                                <div class="col-sm-10 mustScroll" style="padding-left:15px;">
+                                    <table id="pending-table"><tr id="pending-queue"></tr></table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- /.slider - right side-->
             </div>
-          </div>
+            <div class="row">
+                <div class="col-sm-12" id="legend-div">
+                    <fieldset>
+                        <legend>Log Server Table</legend>
+                        <div class="row" id="log-table-legend">
+                            <div class="col-sm-3"><strong>N       </strong>&nbsp;&nbsp;No operation</div>
+                            <div class="col-sm-3"><strong>C       </strong>&nbsp;&nbsp;Configuration change</div>
+                            <div class="col-sm-3"><strong>&#9679; </strong>&nbsp;&nbsp;Match index</div>
+                            <div class="col-sm-3"><strong>&#9650; </strong>&nbsp;&nbsp;Next index</div>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <div class="col-sm-12" id="log-div"><!-- Log table --></div></div>
         </div>
-      </div>
-    </div>
-
-    <div id="context-menu">
-      <ul class="dropdown-menu" role="menu">
-      </ul>
-    </div>
-
-  </body>
+        <div id="modal-details" class="modal" tabindex="-1" data-keyboard="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title"></h4>
+                    </div>
+                    <div class="modal-body">
+                    </div>
+                    <div class="modal-footer">
+                    </div>
+                </div><!-- /.modal-content -->
+            </div><!-- /.modal-dialog -->
+        </div><!-- /.modal -->
+        <div id="modal-help" class="modal" tabindex="-1" data-keyboard="true">
+            <div class="modal-dialog" style="width: 700px">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title">Keyboard shortcuts</h4>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table">
+                            <tr>
+                                <td><kbd>&nbsp;</kbd>&nbsp;/&nbsp;<kbd>.</kbd></td>
+                                <td>Pause/unpause</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>?</kbd></td>
+                                <td>Help</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>C</kbd></td>
+                                <td>Submit client request to leader of highest term, if any</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>R</kbd></td>
+                                <td>Restart leader of highest term, if any</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>T</kbd></td>
+                                <td>Adjust election timers to avoid a split vote</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>A</kbd></td>
+                                <td>Align election timers to encourage a split vote</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>L</kbd></td>
+                                <td>Set up log replication start scenario</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>B</kbd></td>
+                                <td>Resume all servers</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>F</kbd></td>
+                                <td>Fork playback, discarding future</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>G</kbd></td>
+                                <td>Add server</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>+</kbd></td>
+                                <td>Double simulation speed</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>-</kbd></td>
+                                <td>Halve simulation speed</td>
+                            </tr>
+                            <tr>
+                                <td><kbd>N</kbd></td>
+                                <td>Reset simulation speed to default (1/100x)</td>
+                            </tr>
+                            <!--<tr>-->
+                                <!--<td><kbd>J</kbd></td>-->
+                                <!--<td>Reset simulation speed to starting conditions</td>-->
+                                <!--</tr>-->
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="modal-section" class="modal" tabindex="-1" data-keyboard="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <div class="text-center" style="padding: 200px 0">
+                            <h1></h1>
+                            <h2></h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="context-menu">
+            <ul class="dropdown-menu" role="menu">
+            </ul>
+        </div>
+    </body>
 </html>

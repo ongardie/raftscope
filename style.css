@@ -1,228 +1,217 @@
 body {
-  font-size: 16pt;
+    font-size: 16pt;
 }
 
 #modal-details {
-  font-size: 12pt;
+    font-size: 12pt;
 }
 
 .tooltip {
-  font-size: 16pt;
+    font-size: 16pt;
 }
 
 .tooltip.top {
-  padding: 9px 0;
+    padding: 9px 0;
 }
+
 .tooltip.top .tooltip-arrow {
-  margin-left: -10px;
-  border-width: 10px 10px 0;
+    margin-left: -10px;
+    border-width: 10px 10px 0;
 }
 
 textarea#title {
- width: 100%;
- max-height: 3.1ex;
- font-weight: bold;
- margin-top: 10px;
+    width: 100%;
+    max-height: 3.1ex;
+    font-weight: bold;
+    margin-top: 10px;
 }
 
 svg a:hover {
-  cursor: pointer;
+    cursor: pointer;
 }
 
 svg #ring, svg #logsbg {
-  fill: #eeeeee;
+    fill: #eeeeee;
 }
 
 svg .server {
 }
 
 svg .server path {
-  fill: none;
-  stroke: black;
+    fill: none;
+    stroke: black;
 }
 
 svg .server.follower path {
-  stroke: #666666;
+    stroke: #666666;
 }
 
 svg .server text {
-  text-anchor: middle;
-  dominant-baseline: central;
-  text-align: center;
+    text-anchor: middle;
+    dominant-baseline: central;
+    text-align: center;
 }
 
 svg .server.leader text.serverid {
-  fill: red;
+    fill: red;
 }
 
 svg .logs text.serverid.leader {
-  fill: red;
+    fill: red;
 }
+
 
 svg .server a,
 svg .server a:active,
 svg .server a:hover,
 svg .server a:focus,
-svg .server a:visited
-{
-  font-size: inherit;
-  text-decoration: none;
+svg .server a:visited {
+    font-size: inherit;
+    text-decoration: none;
 }
 
 svg .server .votes .have {
-  fill: black;
-  stroke: black;
+    fill: black;
+    stroke: black;
 }
 
 svg .server .votes .coming {
-  fill: gray;
-  stroke: black;
+    fill: gray;
+    stroke: black;
 }
 
 svg .server .votes .no {
-  fill: none;
-  stroke: black;
+    fill: none;
+    stroke: black;
 }
 
 svg .message {
-  stroke-width: 3;
+    stroke-width: 3;
 }
 
 svg .message.RequestVote {
-  fill:   #66c2a5;
-  stroke: #66c2a5;
+    fill: #66c2a5;
+    stroke: #66c2a5;
 }
 
 svg .message.AppendEntries {
-  fill:   #fc8d62;
-  stroke: #fc8d62;
+    fill: #fc8d62;
+    stroke: #fc8d62;
 }
 
 svg .message.request circle {
 }
 
 svg .message.reply circle {
-  /* fill with no opacity so it's clickable */
-  fill-opacity: 0;
+    /* fill with no opacity so it's clickable */
+    fill-opacity: 0;
 }
 
 svg .logs text {
-  text-anchor: middle;
-  dominant-baseline: central;
-  text-align: center;
+    text-anchor: middle;
+    dominant-baseline: central;
+    text-align: center;
 }
 
 svg .log {
-  fill: none;
-  stroke: gray;
-}
-
-svg .entry rect {
-  fill: none;
-  stroke: black;
-  stroke-width: 3;
-}
-
-svg .entry.uncommitted rect {
-}
-
-svg .entry.committed rect {
-}
-
-svg .entry text {
-  text-anchor: middle;
-  dominant-baseline: central;
-  text-align: center;
+    fill: none;
+    stroke: gray;
 }
 
 svg #pause.paused {
-  fill:white;
+    fill: white;
 }
 
 svg #pause.resumed {
-  fill:none;
+    fill: none;
 }
 
 @media (min-width: 768px) {
-  #modal-details .modal-body .dl-horizontal dt {
-    width: 100px;
-  }
-  .dl-horizontal dd {
-    margin-left: 120px;
-  }
+    #modal-details .modal-body .dl-horizontal dt {
+        width: 120px;
+    }
+
+    .dl-horizontal dd {
+        margin-left: 140px;
+    }
 }
 
 /* darker slider backgrounds (higher contrast) */
-.slider-track {
-  background-image: linear-gradient(to bottom, #c3c3c3 0%, #efefef 100%);
+.row{
+  margin-left: 0px;
+  margin-right: 0px;
 }
-.slider-selection {
-  background-image: linear-gradient(to bottom, #efefef 0%, #c3c3c3 100%);
+.slider-track {
+    background-image: linear-gradient(to bottom, #c3c3c3 0%, #efefef 100%);
 }
 
-a#time-button  {
-  color: inherit;
+.slider-selection {
+    background-image: linear-gradient(to bottom, #efefef 0%, #c3c3c3 100%);
+}
+
+a#time-button {
+    color: inherit;
 }
 
 .slide {
-  height: 500px;
+    height: 500px;
 }
 
 .slide p {
-  font-size: 16pt;
+    font-size: 16pt;
 }
 
 .slide .modal-header {
-  padding: 5px 15px;
+    padding: 5px 15px;
 }
 
 .slide ol {
-  font-weight: bold;
-  color: #428bca;
+    font-weight: bold;
+    color: #428bca;
 }
 
-
 .slide ul {
-  font-size:20pt;
-  font-weight: bold;
-  line-height: 16pt;
-  color: #428bca;
+    font-size: 20pt;
+    font-weight: bold;
+    line-height: 16pt;
+    color: #428bca;
 }
 
 .slide li p {
-  font-weight: normal;
-  font-size:16pt;
-  color: #333;
-  line-height: 1.4;
+    font-weight: normal;
+    font-size: 16pt;
+    color: #333;
+    line-height: 1.4;
 }
 
 .slide blockquote p::before {
-  content: "\201C";
-  font-weight: bold;
-  font-size: 18pt;
-  line-height: 14pt;
-  margin-right: 2px;
+    content: "\201C";
+    font-weight: bold;
+    font-size: 18pt;
+    line-height: 14pt;
+    margin-right: 2px;
 }
+
 .slide blockquote p::after {
-  content: "\201D";
-  font-weight: bold;
-  font-size: 18pt;
-  line-height: 14pt;
+    content: "\201D";
+    font-weight: bold;
+    font-size: 18pt;
+    line-height: 14pt;
 }
 
 .slide blockquote {
-  padding: 0;
-  padding-left: 20px;
-  border: none;
-  margin-bottom: 15px;
+    padding: 0;
+    padding-left: 20px;
+    border: none;
+    margin-bottom: 15px;
 }
 
 .slide blockquote p {
-  line-height: 1.1;
-  font-size: 14pt;
-  font-style: italic;
-  color: #555;
-  margin-bottom: 2px;
+    line-height: 1.1;
+    font-size: 14pt;
+    font-style: italic;
+    color: #555;
+    margin-bottom: 2px;
 }
 
 .slide h1,
@@ -232,9 +221,138 @@ a#time-button  {
 .slide h5,
 .slide h6,
 .blue {
-  color: #428bca;
+    color: #428bca;
 }
 
 .slide .gray {
-  color: #333;
+    color: #333;
 }
+
+.modal {z-index: 1080;}
+
+
+/* Log table */
+#log-div {
+  height: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+#log-table {
+  border-collapse: separate;
+  border-spacing: 1px;
+  min-width: 100%;
+}
+
+#log-table th, #log-table td {
+  border: 2px solid #efefef;
+  width: 36px;
+  padding: 4px 2px 4px 2px;
+  text-align: center;
+  position: relative;
+  white-space: nowrap;
+}
+
+#log-table tr *:first-child {text-align: left}
+#log-table td.leader {color: red;}
+#log-table td.committed, #log-table td.uncommitted {
+  border-color: #777;
+  box-shadow: inset 0 0 1px 2px #fff;
+}
+#log-table td.uncommitted {border-color:#fff; border-style: dashed;}
+
+#log-table td.noop::after { content: 'N' }
+/* #log-table td.config::after { content: 'C' } */
+#log-table td.config > small {  }
+
+.mustScroll {overflow-x: scroll;}
+
+
+
+#log-table-legend {font-size: 14px}
+#legend-div{padding-top: 10px}
+
+
+
+#pending-table {
+  width: 100%;
+  border: 1px solid gray;
+  display: inline-block;
+
+  border-radius: 5px;
+  border-collapse: inherit;
+  background-color: #eeeeee;
+}
+
+.logh {line-height: 40px;}
+
+#pending-table td {
+  height: 40px;
+  width: 30px;
+  min-width: 30px ;
+  padding: 0 2px 0 2px;
+
+  background-color: #149bdf;
+  border: 1px solid white;
+  line-height: 36px;
+  box-sizing: border-box;
+  border-collapse: inherit;
+  border-radius: 4px;
+  text-align: center;
+  color: white;
+  white-space: nowrap;
+}
+#pending-table tr>td:last-child {
+  width:auto;
+  border: solid 2px transparent;
+  border-left: 0px;
+  border-right: 0px;
+  background-color: transparent;
+}
+
+#pending-table td.add::before { content: '+ S'}
+#pending-table td.rm {background-color: #FF1744}
+#pending-table td.rm::before { content: '- S'}
+
+
+.matchIndex::before,
+.nextIndex::before {
+  position: absolute;
+  z-index: 3;
+  color: #000;
+  text-shadow: 0 0 2px gray;
+}
+
+.matchIndex::before {
+  content: '\25CF';
+  top: 1.2em;
+  right: -8px;
+}
+
+.nextIndex::before {
+  content: '\25B2';
+  font-size: 15px;
+  bottom: -0.8em;
+  left: 50%;
+  margin-left:-7px;
+}
+
+.color-0{fill: #FC0FC0; background: #FC0FC0}/*pink*/
+.color-1{fill: #4CAF50; background: #4CAF50}/*green*/
+.color-2{fill: #2196F3; background: #2196F3} /*light blue*/
+.color-3{fill: #FF1744; background: #FF1744} /*red*/
+.color-4{fill: #FFEB3B; background: #FFEB3B} /*yellow*/
+.color-5{fill: #18FFFF; background: #18FFFF} /* cyan*/
+.color-6{fill: #E040FB; background: #E040FB} /*purple*/
+.color-7{fill: #69F0AE; background: #69F0AE}
+.color-8{fill: #FF9800; background: #FF9800} /*orange*/
+.color-9{fill: #64DD17; background: #64DD17} /*light greem*/
+.color-stopped{fill: gray; background: gray}
+
+/* nav bar */
+#sliders {margin-top: 30px}
+#sliders .row {margin-bottom: 50px; margin-left: 10px}
+#sliders .slider.slider-horizontal {width: 80%}
+
