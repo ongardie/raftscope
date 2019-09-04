@@ -6,7 +6,6 @@
 /* global raft */
 /* global makeState */
 /* global ELECTION_TIMEOUT */
-/* global NUM_SERVERS */
 'use strict';
 
 var playback;
@@ -14,6 +13,7 @@ var render = {};
 var state;
 var record;
 var replay;
+var NUM_SERVERS = 3;
 
 $(function() {
 
@@ -84,7 +84,8 @@ playback = function() {
   };
 }();
 
-(function() {
+var serverInit = function() {
+  state.current.servers = [];
   for (var i = 1; i <= NUM_SERVERS; i += 1) {
       var peers = [];
       for (var j = 1; j <= NUM_SERVERS; j += 1) {
@@ -93,7 +94,9 @@ playback = function() {
       }
       state.current.servers.push(raft.server(i, peers));
   }
-})();
+};
+
+serverInit();
 
 var svg = $('svg');
 
@@ -129,6 +132,8 @@ $('#ring', svg).attr(ringSpec);
 var serverModal;
 var messageModal;
 
+var serverSvgCreate = function() {
+  $('#servers .server', svg).remove();
 state.current.servers.forEach(function (server) {
   var s = serverSpec(server.id);
   $('#servers', svg).append(
@@ -153,6 +158,9 @@ state.current.servers.forEach(function (server) {
                    .attr({x: s.cx, y: s.cy}))
         ));
 });
+};
+
+serverSvgCreate();
 
 var MESSAGE_RADIUS = 8;
 
@@ -753,6 +761,24 @@ timeSlider.on('slideStop', function() {
 timeSlider.on('slide', function() {
   state.seek(timeSlider.slider('getValue'));
   render.update();
+});
+
+var serverSlider = $("#server");
+serverSlider.slider({
+  tooltip: 'always',
+  formater: function(value) {
+    return value;
+  }
+});
+
+serverSlider.on('slideStop', function() {
+  var num = serverSlider.slider('getValue');
+  if (num != NUM_SERVERS) {
+    NUM_SERVERS = num;
+    serverInit();
+    serverSvgCreate();
+    state.updater();
+  }
 });
 
 $('#time-button')
