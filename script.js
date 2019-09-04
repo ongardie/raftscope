@@ -85,6 +85,7 @@ playback = function() {
 }();
 
 var serverInit = function() {
+  state.current.servers = [];
   for (var i = 1; i <= NUM_SERVERS; i += 1) {
       var peers = [];
       for (var j = 1; j <= NUM_SERVERS; j += 1) {
