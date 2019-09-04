@@ -10,7 +10,6 @@ var RPC_TIMEOUT = 50000;
 var MIN_RPC_LATENCY = 10000;
 var MAX_RPC_LATENCY = 15000;
 var ELECTION_TIMEOUT = 100000;
-var NUM_SERVERS = 5;
 var BATCH_SIZE = 1;
 
 (function() {
@@ -109,7 +108,7 @@ rules.sendRequestVote = function(model, server, peer) {
 
 rules.becomeLeader = function(model, server) {
   if (server.state == 'candidate' &&
-      util.countTrue(util.mapValues(server.voteGranted)) + 1 > Math.floor(NUM_SERVERS / 2)) {
+      util.countTrue(util.mapValues(server.voteGranted)) + 1 > Math.floor(model.servers.length / 2)) {
     //console.log('server ' + server.id + ' is leader in term ' + server.term);
     server.state = 'leader';
     server.nextIndex    = util.makeMap(server.peers, server.log.length + 1);
@@ -146,7 +145,7 @@ rules.sendAppendEntries = function(model, server, peer) {
 rules.advanceCommitIndex = function(model, server) {
   var matchIndexes = util.mapValues(server.matchIndex).concat(server.log.length);
   matchIndexes.sort(util.numericCompare);
-  var n = matchIndexes[Math.floor(NUM_SERVERS / 2)];
+  var n = matchIndexes[Math.floor(model.servers.length / 2)];
   if (server.state == 'leader' &&
       logTerm(server.log, n) == server.term) {
     server.commitIndex = Math.max(server.commitIndex, n);
