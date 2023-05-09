@@ -9,6 +9,8 @@
 /* global NUM_SERVERS */
 'use strict';
 
+const START_PROPOSER_IDX = 1
+
 var playback;
 var render = {};
 var state;
@@ -88,10 +90,10 @@ playback = function() {
   for (var i = 1; i <= NUM_SERVERS; i += 1) {
       var peers = [];
       for (var j = 1; j <= NUM_SERVERS; j += 1) {
-        if (i != j)
+        if (i !== j)
           peers.push(j);
       }
-      state.current.servers.push(raft.server(i, peers));
+      state.current.servers.push(raft.server(i, peers, i === START_PROPOSER_IDX, i === START_PROPOSER_IDX ? START_PROPOSER_IDX : undefined));
   }
 })();
 
@@ -612,7 +614,7 @@ render.update = function() {
   // value hasn't changed.
   var serversSame = false;
   var messagesSame = false;
-  if (lastRenderedO == state.current) {
+  if (lastRenderedO === state.current) {
     serversSame = util.equals(lastRenderedV.servers, state.current.servers);
     messagesSame = util.equals(lastRenderedV.messages, state.current.messages);
   }
