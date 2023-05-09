@@ -10,7 +10,7 @@ const RPC_TIMEOUT = 50000;
 const MIN_RPC_LATENCY = 10000;
 const MAX_RPC_LATENCY = 15000;
 const ELECTION_TIMEOUT = 100000;
-const NUM_SERVERS = 5;
+const NUM_SERVERS = 6;
 const BATCH_SIZE = 1;
 
 const DIRECTIONS = {
@@ -99,13 +99,15 @@ const stepDown = (model, server, term) => {
 };
 
 const getNextProposerIdx = (model) => {
-  const activeServers = model.servers.filter(item => item.state === SERVER_STATES.follower).sort((a, b) => a - b )
+  const activeServers = model.servers.filter(item => item.state === SERVER_STATES.follower || SERVER_STATES.candidate).sort((a, b) => a - b )
   const nextProposerIdx = model.servers.find(item => item.nextProposerIdx)?.nextProposerIdx
-  const findIdxFromActiveServers = activeServers.find(item => item.id === nextProposerIdx)?.id
+  const foundProposerServer = activeServers.find(item => item.id === nextProposerIdx)
+  const findIdxFromActiveServers = foundProposerServer?.id
+  const isFoundServerCanBeProposer = foundProposerServer.state !== SERVER_STATES.stopped
   const ifServerIdxNotFoundIdx = activeServers.find(item => item.id > nextProposerIdx)
-      ? activeServers.find(item => item.id > nextProposerIdx).id
+      ? activeServers.find(item => item.id > nextProposerIdx && item.state !== SERVER_STATES.stopped).id
       : activeServers[0].id
-  return findIdxFromActiveServers ?? ifServerIdxNotFoundIdx
+  return isFoundServerCanBeProposer ? findIdxFromActiveServers : ifServerIdxNotFoundIdx
 
 }
 
@@ -113,21 +115,11 @@ rules.startNewElection = (model, server) => {
   const isLeaderExist = model.servers.some(item => item.state === SERVER_STATES.leader)
   if ((server.state === SERVER_STATES.follower) &&
       server.electionAlarm <= model.time && !isLeaderExist) {
-    const proposerIdx = getNextProposerIdx(model)
-    server.electionAlarm = proposerIdx === server.id ? 0 : makeElectionAlarm(model.time);
+    server.electionAlarm = makeElectionAlarm(model.time);
     server.term += 1;
     server.votedFor = server.id;
-    server.state = proposerIdx === server.id ? SERVER_STATES.leader : SERVER_STATES.follower;
-    server.voteGranted  = util.makeMap(server.peers, false);
-    server.matchIndex   = util.makeMap(server.peers, 0);
-    server.nextIndex    = util.makeMap(server.peers, 1);
-    server.rpcDue       = util.makeMap(server.peers, 0);
-    server.heartbeatDue = util.makeMap(server.peers, 0);
-    server.nextProposerIdx = proposerIdx === server.id
-        ? server.id + 1 > NUM_SERVERS
-            ? START_PROPOSER_IDX
-            : server.id + 1
-        : undefined
+    server.state = SERVER_STATES.candidate;
+    clearServers([server])
   }
 };
 
@@ -146,15 +138,42 @@ rules.sendRequestVote = (model, server, peer) => {
 };
 
 rules.becomeLeader = (model, server) => {
-  if (server.state === SERVER_STATES.candidate &&
-      util.countTrue(util.mapValues(server.voteGranted)) + 1 > Math.floor(NUM_SERVERS / 2)) {
-    server.state = SERVER_STATES.leader;
-    server.nextIndex    = util.makeMap(server.peers, server.log.length + 1);
-    server.rpcDue       = util.makeMap(server.peers, util.Inf);
-    server.heartbeatDue = util.makeMap(server.peers, 0);
-    server.electionAlarm = util.Inf;
+  const isLeaderExist = model.servers.some(item => item.state === SERVER_STATES.leader)
+  const isCandidateExist = model.servers.some(item => item.state === SERVER_STATES.candidate)
+  const countOfVotes = Object.values(server.voteGranted).reduce((acc, item) => {
+    if(item) {
+      acc += 1
+    }
+    return acc
+  }, 1)
+  if(countOfVotes >= Math.floor(NUM_SERVERS * 2 / 3) && !isLeaderExist && isCandidateExist) {
+    const proposerIdx = getNextProposerIdx(model)
+    const newLeader = model.servers.find(modelServer => modelServer.id === proposerIdx)
+
+    newLeader.state = SERVER_STATES.leader
+    newLeader.nextProposerIdx = newLeader.id + 1
+    newLeader.nextIndex = util.makeMap(newLeader.peers, newLeader.log.length + 1);
+    newLeader.rpcDue       = util.makeMap(newLeader.peers, util.Inf);
+    newLeader.heartbeatDue = util.makeMap(newLeader.peers, 0);
+    newLeader.electionAlarm = util.Inf;
+
+    const peersForProposer = model.servers.filter((item) => item.id !== newLeader.id)
+    peersForProposer.forEach(serv => serv.nextProposerIdx = null)
+    clearServers(model.servers.filter((item) => item.id !== newLeader.id))
   }
 };
+
+const clearServers = (servers) => {
+  servers.forEach(server => {
+        server.votedFor = null
+        server.electionAlarm = server.state === SERVER_STATES.leader ? 0 : makeElectionAlarm(0)
+        server.voteGranted =  util.makeMap(server.peers, false)
+        server.matchIndex =   util.makeMap(server.peers, 0)
+        server.nextIndex =    util.makeMap(server.peers, 1)
+        server.rpcDue =      util.makeMap(server.peers, 0)
+        server.heartbeatDue = util.makeMap(server.peers, 0)
+  })
+}
 
 rules.sendAppendEntries = (model, server, peer) => {
   if (server.state === SERVER_STATES.leader &&
@@ -192,23 +211,13 @@ rules.advanceCommitIndex = (model, server) => {
 };
 
 const handleRequestVoteRequest = (model, server, request) => {
-  if (server.term < request.term)
-    stepDown(model, server, request.term);
-  let granted = false;
-  if (server.term === request.term &&
-      (server.votedFor === null ||
-       server.votedFor === request.from) &&
-      (request.lastLogTerm > logTerm(server.log, server.log.length) ||
-       (request.lastLogTerm === logTerm(server.log, server.log.length) &&
-        request.lastLogIndex >= server.log.length))) {
-    granted = true;
+  if (server.state === SERVER_STATES.candidate) {
     server.votedFor = request.from;
     server.electionAlarm = makeElectionAlarm(model.time);
+    server.peers.forEach(peerId => {
+      server.voteGranted[peerId] = model.servers[peerId-1].state === SERVER_STATES.candidate;
+    })
   }
-  sendReply(model, request, {
-    term: server.term,
-    granted: granted,
-  });
 };
 
 const handleRequestVoteReply = (model, server, reply) => {
@@ -313,6 +322,7 @@ raft.update = (model) => {
 };
 
 raft.stop = (model, server) => {
+  clearServers([server])
   server.state = SERVER_STATES.stopped;
   server.electionAlarm = 0;
 };
