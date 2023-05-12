@@ -89,6 +89,8 @@ raft.server = (id, peers, isLeader, leaderIdx) => {
   };
 };
 
+const getNewProposerIdxFromNum = (num) => num + 1 > NUM_SERVERS ? 1 : num + 1
+
 const stepDown = (model, server, term) => {
   server.term = term;
   server.state = SERVER_STATES.follower;
@@ -99,15 +101,12 @@ const stepDown = (model, server, term) => {
 };
 
 const getNextProposerIdx = (model) => {
-  const activeServers = model.servers.filter(item => item.state === SERVER_STATES.follower || SERVER_STATES.candidate).sort((a, b) => a - b )
+  const activeServers = model.servers.filter(item => item.state === SERVER_STATES.follower || SERVER_STATES.candidate)
   const nextProposerIdx = model.servers.find(item => item.nextProposerIdx)?.nextProposerIdx
   const foundProposerServer = activeServers.find(item => item.id === nextProposerIdx)
   const findIdxFromActiveServers = foundProposerServer?.id
   const isFoundServerCanBeProposer = foundProposerServer.state !== SERVER_STATES.stopped
-  const ifServerIdxNotFoundIdx = activeServers.find(item => item.id > nextProposerIdx)
-      ? activeServers.find(item => item.id > nextProposerIdx && item.state !== SERVER_STATES.stopped).id
-      : activeServers[0].id
-  return isFoundServerCanBeProposer ? findIdxFromActiveServers : ifServerIdxNotFoundIdx
+  return isFoundServerCanBeProposer ? findIdxFromActiveServers : null
 
 }
 
@@ -116,10 +115,9 @@ rules.startNewElection = (model, server) => {
   if ((server.state === SERVER_STATES.follower) &&
       server.electionAlarm <= model.time && !isLeaderExist) {
     server.electionAlarm = makeElectionAlarm(model.time);
-    server.term += 1;
     server.votedFor = server.id;
     server.state = SERVER_STATES.candidate;
-    clearServers([server])
+    clearServers(model, [server])
   }
 };
 
@@ -137,41 +135,54 @@ rules.sendRequestVote = (model, server, peer) => {
   }
 };
 
+const getIsNextLeaderAlive = (model) => {
+  const nextLeaderFoundIdx = model.servers.find(item => item.nextProposerIdx)?.nextProposerIdx
+  return model.servers.find(item => item.id === nextLeaderFoundIdx)?.state !== SERVER_STATES.stopped
+}
+
 rules.becomeLeader = (model, server) => {
   const isLeaderExist = model.servers.some(item => item.state === SERVER_STATES.leader)
-  const isCandidateExist = model.servers.some(item => item.state === SERVER_STATES.candidate)
+  const isNextLeaderAlive = getIsNextLeaderAlive(model)
   const countOfVotes = Object.values(server.voteGranted).reduce((acc, item) => {
     if(item) {
       acc += 1
     }
     return acc
   }, 1)
-  if(countOfVotes >= Math.floor(NUM_SERVERS * 2 / 3) && !isLeaderExist && isCandidateExist) {
-    const proposerIdx = getNextProposerIdx(model)
-    const newLeader = model.servers.find(modelServer => modelServer.id === proposerIdx)
+  if(countOfVotes >= Math.floor(NUM_SERVERS * 2 / 3) && server.state === SERVER_STATES.candidate) {
+    server.term += 1
+    if(isNextLeaderAlive && !isLeaderExist) {
+      const proposerIdx = getNextProposerIdx(model)
+      if(server.id === proposerIdx) {
+        server.state = SERVER_STATES.leader
+        server.nextProposerIdx = getNewProposerIdxFromNum(server.id)
+        server.nextIndex = util.makeMap(server.peers, server.log.length + 1);
+        server.rpcDue       = util.makeMap(server.peers, util.Inf);
+        server.heartbeatDue = util.makeMap(server.peers, 0);
+        server.electionAlarm = util.Inf;
 
-    newLeader.state = SERVER_STATES.leader
-    newLeader.nextProposerIdx = newLeader.id + 1
-    newLeader.nextIndex = util.makeMap(newLeader.peers, newLeader.log.length + 1);
-    newLeader.rpcDue       = util.makeMap(newLeader.peers, util.Inf);
-    newLeader.heartbeatDue = util.makeMap(newLeader.peers, 0);
-    newLeader.electionAlarm = util.Inf;
-
-    const peersForProposer = model.servers.filter((item) => item.id !== newLeader.id)
-    peersForProposer.forEach(serv => serv.nextProposerIdx = null)
-    clearServers(model.servers.filter((item) => item.id !== newLeader.id))
+        const peersForProposer = model.servers.filter((item) => item.id !== server.id)
+        peersForProposer.forEach(serv => serv.nextProposerIdx = null)
+        clearServers(model, peersForProposer)
+        return
+      }
+    }
+    if(!isNextLeaderAlive && !isLeaderExist) {
+      console.log('iterate')
+      const foundServ = model.servers.find(item => item.nextProposerIdx)
+      foundServ.nextProposerIdx = getNewProposerIdxFromNum(foundServ.nextProposerIdx)
+    }
+    clearServers(model, [server])
   }
 };
 
-const clearServers = (servers) => {
+const clearServers = (model, servers) => {
   servers.forEach(server => {
         server.votedFor = null
-        server.electionAlarm = server.state === SERVER_STATES.leader ? 0 : makeElectionAlarm(0)
+        server.electionAlarm = server.state === SERVER_STATES.leader ? 0 : makeElectionAlarm(model.time)
         server.voteGranted =  util.makeMap(server.peers, false)
-        server.matchIndex =   util.makeMap(server.peers, 0)
-        server.nextIndex =    util.makeMap(server.peers, 1)
-        server.rpcDue =      util.makeMap(server.peers, 0)
-        server.heartbeatDue = util.makeMap(server.peers, 0)
+        server.rpcDue =      util.makeMap(server.peers, model.time + RPC_TIMEOUT)
+        server.heartbeatDue = util.makeMap(server.peers, model.time + ELECTION_TIMEOUT / 2)
   })
 }
 
@@ -215,14 +226,12 @@ const handleRequestVoteRequest = (model, server, request) => {
     server.votedFor = request.from;
     server.electionAlarm = makeElectionAlarm(model.time);
     server.peers.forEach(peerId => {
-      server.voteGranted[peerId] = model.servers[peerId-1].state === SERVER_STATES.candidate;
+      server.voteGranted[peerId] = model.servers[peerId-1].state === SERVER_STATES.candidate && server.term === request.term;
     })
   }
 };
 
 const handleRequestVoteReply = (model, server, reply) => {
-  if (server.term < reply.term)
-    stepDown(model, server, reply.term);
   if (server.state === SERVER_STATES.candidate &&
       server.term === reply.term) {
     server.rpcDue[reply.from] = util.Inf;
@@ -260,6 +269,7 @@ const handleAppendEntriesRequest = (model, server, request) => {
     term: server.term,
     success: success,
     matchIndex: matchIndex,
+    granted: true
   });
 };
 
@@ -322,12 +332,13 @@ raft.update = (model) => {
 };
 
 raft.stop = (model, server) => {
-  clearServers([server])
+  clearServers(model, [server])
   server.state = SERVER_STATES.stopped;
   server.electionAlarm = 0;
 };
 
 raft.resume = (model, server) => {
+  clearServers(model, [server])
   server.state = SERVER_STATES.follower;
   server.electionAlarm = makeElectionAlarm(model.time);
 };
