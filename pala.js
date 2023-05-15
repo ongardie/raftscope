@@ -77,7 +77,6 @@ pala.server = (id, peers, isLeader, leaderIdx) => {
     term: 1,
     votedFor: null,
     log: [],
-    nextProposerIdx: leaderIdx + 1,
     electionAlarm: isLeader ? 0 : makeElectionAlarm(0),
     voteGranted:  util.makeMap(peers, false),
     matchIndex:   util.makeMap(peers, 0),
@@ -87,7 +86,7 @@ pala.server = (id, peers, isLeader, leaderIdx) => {
   };
 };
 
-const getNewProposerIdxFromNum = (num) => num + 1 > NUM_SERVERS ? 1 : num + 1
+const getNewProposerIdxFromServer = (epoch) => epoch % NUM_SERVERS + 1
 
 const stepDown = (model, server, term) => {
   server.term = term;
@@ -97,11 +96,6 @@ const stepDown = (model, server, term) => {
     server.electionAlarm = makeElectionAlarm(model.time);
   }
 };
-
-const getNextProposerIdx = (model) => {
-  const nextProposerIdx = model.servers.find(item => item.nextProposerIdx)?.nextProposerIdx
-  return model.servers.find(item => item.id === nextProposerIdx)?.id
-}
 
 rules.startNewElection = (model, server) => {
   const isLeaderExist = model.servers.some(item => item.state === SERVER_STATES.leader)
@@ -129,14 +123,7 @@ rules.sendRequestVote = (model, server, peer) => {
   }
 };
 
-const getIsNextLeaderAlive = (model) => {
-  const nextLeaderFoundIdx = model.servers.find(item => item.nextProposerIdx)?.nextProposerIdx
-  return model.servers.find(item => item.id === nextLeaderFoundIdx)?.state !== SERVER_STATES.stopped
-}
-
 rules.becomeLeader = (model, server) => {
-  const isLeaderExist = model.servers.some(item => item.state === SERVER_STATES.leader)
-  const isNextLeaderAlive = getIsNextLeaderAlive(model)
   const countOfVotes = Object.values(server.voteGranted).reduce((acc, item) => {
     if(item) {
       acc += 1
@@ -145,23 +132,15 @@ rules.becomeLeader = (model, server) => {
   }, 1)
 
   if(countOfVotes >= Math.floor(NUM_SERVERS * 2 / 3) && server.state === SERVER_STATES.candidate) {
-    if(isNextLeaderAlive && !isLeaderExist) {
-      const proposerIdx = getNextProposerIdx(model)
+      const proposerIdx = getNewProposerIdxFromServer(server.term)
+
       if(server.id === proposerIdx) {
         server.state = SERVER_STATES.leader
-        server.nextProposerIdx = getNewProposerIdxFromNum(server.id)
         server.nextIndex = util.makeMap(server.peers, server.log.length + 1);
         server.rpcDue       = util.makeMap(server.peers, util.Inf);
         server.heartbeatDue = util.makeMap(server.peers, 0);
         server.electionAlarm = util.Inf;
-
-        const peersForProposer = model.servers.filter((item) => item.id !== server.id)
-        peersForProposer.forEach(serv => serv.nextProposerIdx = null)
       }
-    }
-    if(!isNextLeaderAlive && !isLeaderExist && Boolean(server.nextProposerIdx)) {
-      server.nextProposerIdx = getNewProposerIdxFromNum(server.nextProposerIdx)
-    }
     clearServers(model, [server])
     server.term += 1
   }
@@ -329,12 +308,6 @@ pala.stop = (model, server) => {
   clearServers(model, [server])
   server.state = SERVER_STATES.stopped;
   server.electionAlarm = 0;
-
-  if(server.nextProposerIdx) {
-    const activeServer = model.servers.find(item => item.state !== SERVER_STATES.stopped)
-    activeServer.nextProposerIdx = server.nextProposerIdx
-    server.nextProposerIdx = null
-  }
 };
 
 pala.resume = (model, server) => {
