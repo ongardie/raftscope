@@ -3,7 +3,7 @@
 /* jshint devel: true */
 /* jshint jquery: true */
 /* global util */
-/* global raft */
+/* global pala */
 /* global makeState */
 /* global ELECTION_TIMEOUT */
 /* global NUM_SERVERS */
@@ -93,7 +93,7 @@ playback = function() {
         if (i !== j)
           peers.push(j);
       }
-      state.current.servers.push(raft.server(i, peers, i === START_PROPOSER_IDX, i === START_PROPOSER_IDX ? START_PROPOSER_IDX : undefined));
+      state.current.servers.push(pala.server(i, peers, i === START_PROPOSER_IDX, i === START_PROPOSER_IDX ? START_PROPOSER_IDX : undefined));
   }
 })();
 
@@ -215,15 +215,15 @@ render.clock = function() {
 };
 
 var serverActions = [
-  ['stop', raft.stop],
-  ['resume', raft.resume],
-  ['restart', raft.restart],
-  ['time out', raft.timeout],
-  ['request', raft.clientRequest],
+  ['stop', pala.stop],
+  ['resume', pala.resume],
+  ['restart', pala.restart],
+  ['time out', pala.timeout],
+  ['request', pala.clientRequest],
 ];
 
 var messageActions = [
-  ['drop', raft.drop],
+  ['drop', pala.drop],
 ];
 
 render.servers = function(serversSame) {
@@ -660,7 +660,7 @@ $(window).keyup(function(e) {
   } else if (e.keyCode == 'C'.charCodeAt(0)) {
     if (leader !== null) {
       state.fork();
-      raft.clientRequest(state.current, leader);
+      pala.clientRequest(state.current, leader);
       state.save();
       render.update();
       $('.modal').modal('hide');
@@ -668,34 +668,34 @@ $(window).keyup(function(e) {
   } else if (e.keyCode == 'R'.charCodeAt(0)) {
     if (leader !== null) {
       state.fork();
-      raft.stop(state.current, leader);
-      raft.resume(state.current, leader);
+      pala.stop(state.current, leader);
+      pala.resume(state.current, leader);
       state.save();
       render.update();
       $('.modal').modal('hide');
     }
   } else if (e.keyCode == 'T'.charCodeAt(0)) {
     state.fork();
-    raft.spreadTimers(state.current);
+    pala.spreadTimers(state.current);
     state.save();
     render.update();
     $('.modal').modal('hide');
   } else if (e.keyCode == 'A'.charCodeAt(0)) {
     state.fork();
-    raft.alignTimers(state.current);
+    pala.alignTimers(state.current);
     state.save();
     render.update();
     $('.modal').modal('hide');
   } else if (e.keyCode == 'L'.charCodeAt(0)) {
     state.fork();
     playback.pause();
-    raft.setupLogReplicationScenario(state.current);
+    pala.setupLogReplicationScenario(state.current);
     state.save();
     render.update();
     $('.modal').modal('hide');
   } else if (e.keyCode == 'B'.charCodeAt(0)) {
     state.fork();
-    raft.resumeAll(state.current);
+    pala.resumeAll(state.current);
     state.save();
     render.update();
     $('.modal').modal('hide');
@@ -768,7 +768,7 @@ $('#time-button')
 // $('[data-toggle="tooltip"]').tooltip();
 
 state.updater = function(state) {
-  raft.update(state.current);
+  pala.update(state.current);
   var time = state.current.time;
   var base = state.base(time);
   state.current.time = base.time;

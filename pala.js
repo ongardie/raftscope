@@ -5,7 +5,7 @@
 /* global util */
 'use strict';
 
-const raft = {};
+const pala = {};
 const RPC_TIMEOUT = 50000;
 const MIN_RPC_LATENCY = 10000;
 const MAX_RPC_LATENCY = 15000;
@@ -34,7 +34,7 @@ const REQUEST_TYPES = {
 (function() {
 
 const rules = {};
-raft.rules = rules;
+pala.rules = rules;
 
 const sendMessage = (model, message) => {
   message.sendTime = model.time;
@@ -69,7 +69,7 @@ const makeElectionAlarm = (now) => {
   return now +  ELECTION_TIMEOUT;
 };
 
-raft.server = (id, peers, isLeader, leaderIdx) => {
+pala.server = (id, peers, isLeader, leaderIdx) => {
   return {
     id: id,
     peers: peers,
@@ -298,7 +298,7 @@ const handleMessage = (model, server, message) => {
 };
 
 
-raft.update = (model) => {
+pala.update = (model) => {
   model.servers.forEach((server) => {
     rules.startNewElection(model, server);
     rules.becomeLeader(model, server);
@@ -325,7 +325,7 @@ raft.update = (model) => {
   });
 };
 
-raft.stop = (model, server) => {
+pala.stop = (model, server) => {
   clearServers(model, [server])
   server.state = SERVER_STATES.stopped;
   server.electionAlarm = 0;
@@ -337,41 +337,41 @@ raft.stop = (model, server) => {
   }
 };
 
-raft.resume = (model, server) => {
+pala.resume = (model, server) => {
   clearServers(model, [server])
   server.state = SERVER_STATES.follower;
   server.electionAlarm = makeElectionAlarm(model.time);
 };
 
-raft.resumeAll = (model) => {
+pala.resumeAll = (model) => {
   model.servers.forEach((server) => {
-    raft.resume(model, server);
+    pala.resume(model, server);
   });
 };
 
-raft.restart = (model, server) => {
-  raft.stop(model, server);
-  raft.resume(model, server);
+pala.restart = (model, server) => {
+  pala.stop(model, server);
+  pala.resume(model, server);
 };
 
-raft.drop = (model, message) => {
+pala.drop = (model, message) => {
   model.messages = model.messages.filter((msg) => msg !== message);
 };
 
-raft.timeout = (model, server) => {
+pala.timeout = (model, server) => {
   server.state = SERVER_STATES.follower;
   server.electionAlarm = 0;
   rules.startNewElection(model, server);
 };
 
-raft.clientRequest = (model, server) => {
+pala.clientRequest = (model, server) => {
   if (server.state === SERVER_STATES.leader) {
     server.log.push({term: server.term,
                      value: 'v'});
   }
 };
 
-raft.spreadTimers = (model) => {
+pala.spreadTimers = (model) => {
   const timers = [];
   model.servers.forEach((server) => {
     if (server.electionAlarm > model.time &&
@@ -401,8 +401,8 @@ raft.spreadTimers = (model) => {
   }
 };
 
-raft.alignTimers = (model) => {
-  raft.spreadTimers(model);
+pala.alignTimers = (model) => {
+  pala.spreadTimers(model);
   const timers = [];
   model.servers.forEach((server) => {
     if (server.electionAlarm > model.time &&
@@ -419,13 +419,13 @@ raft.alignTimers = (model) => {
   });
 };
 
-raft.setupLogReplicationScenario = (model) => {
+pala.setupLogReplicationScenario = (model) => {
   const s1 = model.servers[0];
-  raft.restart(model, model.servers[1]);
-  raft.restart(model, model.servers[2]);
-  raft.restart(model, model.servers[3]);
-  raft.restart(model, model.servers[4]);
-  raft.timeout(model, model.servers[0]);
+  pala.restart(model, model.servers[1]);
+  pala.restart(model, model.servers[2]);
+  pala.restart(model, model.servers[3]);
+  pala.restart(model, model.servers[4]);
+  pala.timeout(model, model.servers[0]);
   rules.startNewElection(model, s1);
   model.servers[1].term = 2;
   model.servers[2].term = 2;
@@ -436,12 +436,12 @@ raft.setupLogReplicationScenario = (model) => {
   model.servers[3].votedFor = 1;
   model.servers[4].votedFor = 1;
   s1.voteGranted = util.makeMap(s1.peers, true);
-  raft.stop(model, model.servers[2]);
-  raft.stop(model, model.servers[3]);
-  raft.stop(model, model.servers[4]);
+  pala.stop(model, model.servers[2]);
+  pala.stop(model, model.servers[3]);
+  pala.stop(model, model.servers[4]);
   rules.becomeLeader(model, s1);
-  raft.clientRequest(model, s1);
-  raft.clientRequest(model, s1);
-  raft.clientRequest(model, s1);
+  pala.clientRequest(model, s1);
+  pala.clientRequest(model, s1);
+  pala.clientRequest(model, s1);
 };
 })();
