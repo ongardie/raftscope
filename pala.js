@@ -69,7 +69,7 @@ const makeElectionAlarm = (now) => {
   return now +  ELECTION_TIMEOUT;
 };
 
-pala.server = (id, peers, isLeader, leaderIdx) => {
+pala.server = (id, peers, isLeader) => {
   return {
     id: id,
     peers: peers,
@@ -105,6 +105,7 @@ rules.startNewElection = (model, server) => {
     server.votedFor = server.id;
     server.state = SERVER_STATES.candidate;
     clearServers(model, [server])
+    server.rpcDue =      util.makeMap(server.peers, model.time)
   }
 };
 
