@@ -3,15 +3,17 @@
 /* jshint devel: true */
 /* jshint jquery: true */
 /* global util */
+/* global START_PROPOSER_IDX */
 'use strict';
 
 const pala = {};
 const RPC_TIMEOUT = 50000;
-const MIN_RPC_LATENCY = 10000;
+const MIN_COUNT_OF_VOTES = 1
 const MAX_RPC_LATENCY = 15000;
 const ELECTION_TIMEOUT = 100000;
 const NUM_SERVERS = 7;
 const BATCH_SIZE = 1;
+const MIN_VOTES_AMOUNT_FOR_MAKING_DECISION = Math.floor(NUM_SERVERS * 2 / 3)
 
 const DIRECTIONS = {
   request: 'request',
@@ -88,6 +90,13 @@ pala.server = (id, peers, isLeader) => {
 
 const getNewProposerIdxFromServer = (epoch) => epoch % NUM_SERVERS + 1
 
+const getVotesCount = (server) => Object.values(server.voteGranted).reduce((acc, item) => {
+  if(item) {
+    acc += 1
+  }
+  return acc
+}, MIN_COUNT_OF_VOTES)
+
 const stepDown = (model, server, term) => {
   server.term = term;
   server.state = SERVER_STATES.follower;
@@ -101,10 +110,10 @@ rules.startNewElection = (model, server) => {
   const isLeaderExist = model.servers.some(item => item.state === SERVER_STATES.leader)
   if ((server.state === SERVER_STATES.follower) &&
       server.electionAlarm <= model.time && !isLeaderExist) {
-    clearServers(model, [server])
+    clearServer(model, server)
     server.votedFor = server.id;
     server.state = SERVER_STATES.candidate;
-    server.rpcDue =      util.makeMap(server.peers, model.time)
+    server.rpcDue = util.makeMap(server.peers, model.time)
   }
 };
 
@@ -124,14 +133,9 @@ rules.sendRequestVote = (model, server, peer) => {
 };
 
 rules.becomeLeader = (model, server) => {
-  const countOfVotes = Object.values(server.voteGranted).reduce((acc, item) => {
-    if(item) {
-      acc += 1
-    }
-    return acc
-  }, 1)
+  const countOfVotes = getVotesCount(server)
 
-  if(countOfVotes >= Math.floor(NUM_SERVERS * 2 / 3) && server.state === SERVER_STATES.candidate) {
+  if(countOfVotes >= MIN_VOTES_AMOUNT_FOR_MAKING_DECISION && server.state === SERVER_STATES.candidate) {
       const proposerIdx = getNewProposerIdxFromServer(server.term)
 
       if(server.id === proposerIdx) {
@@ -141,19 +145,17 @@ rules.becomeLeader = (model, server) => {
         server.heartbeatDue = util.makeMap(server.peers, 0);
         server.electionAlarm = util.Inf;
       }
-    clearServers(model, [server])
+    clearServer(model, server)
     server.term += 1
   }
 };
 
-const clearServers = (model, servers) => {
-  servers.forEach(server => {
-        server.votedFor = null
-        server.electionAlarm = server.state === SERVER_STATES.leader || server.state === SERVER_STATES.stopped ? 0 : makeElectionAlarm(model.time)
-        server.voteGranted =  util.makeMap(server.peers, false)
-        server.rpcDue =      util.makeMap(server.peers, model.time + RPC_TIMEOUT)
-        server.heartbeatDue = util.makeMap(server.peers, model.time + ELECTION_TIMEOUT / 2)
-  })
+const clearServer = (model, server) => {
+  server.votedFor = null
+  server.electionAlarm = server.state === SERVER_STATES.leader || server.state === SERVER_STATES.stopped ? 0 : makeElectionAlarm(model.time)
+  server.voteGranted = util.makeMap(server.peers, false)
+  server.rpcDue = util.makeMap(server.peers, model.time + RPC_TIMEOUT)
+  server.heartbeatDue = util.makeMap(server.peers, model.time + ELECTION_TIMEOUT / 2)
 }
 
 rules.sendAppendEntries = (model, server, peer) => {
@@ -305,13 +307,13 @@ pala.update = (model) => {
 };
 
 pala.stop = (model, server) => {
-  clearServers(model, [server])
+  clearServer(model, server)
   server.state = SERVER_STATES.stopped;
   server.electionAlarm = 0;
 };
 
 pala.resume = (model, server) => {
-  clearServers(model, [server])
+  clearServer(model, server)
   server.state = SERVER_STATES.follower;
   server.electionAlarm = makeElectionAlarm(model.time);
 };
