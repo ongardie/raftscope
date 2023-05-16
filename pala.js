@@ -101,10 +101,9 @@ rules.startNewElection = (model, server) => {
   const isLeaderExist = model.servers.some(item => item.state === SERVER_STATES.leader)
   if ((server.state === SERVER_STATES.follower) &&
       server.electionAlarm <= model.time && !isLeaderExist) {
-    server.electionAlarm = makeElectionAlarm(model.time);
+    clearServers(model, [server])
     server.votedFor = server.id;
     server.state = SERVER_STATES.candidate;
-    clearServers(model, [server])
     server.rpcDue =      util.makeMap(server.peers, model.time)
   }
 };
