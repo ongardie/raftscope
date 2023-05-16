@@ -7,9 +7,14 @@
 /* global makeState */
 /* global ELECTION_TIMEOUT */
 /* global NUM_SERVERS */
+/* global SERVER_STATES */
 'use strict';
 
 const START_PROPOSER_IDX = 1
+
+const TERM_COLORS = {
+  recovery: 6,
+}
 
 var playback;
 var render = {};
@@ -45,6 +50,7 @@ var termColors = [
   '#e78ac3',
   '#a6d854',
   '#ffd92f',
+  '#fe4c4c'
 ];
 
 var SVG = function(tag) {
@@ -226,6 +232,16 @@ var messageActions = [
   ['drop', pala.drop],
 ];
 
+const chooseNodeColor = (server) => {
+  if(server.state === SERVER_STATES.stopped) {
+    return 'gray'
+  }
+  if(server.state === SERVER_STATES.recovery) {
+    return termColors[TERM_COLORS.recovery]
+  }
+  return termColors[server.term % termColors.length]
+}
+
 render.servers = function(serversSame) {
   state.current.servers.forEach(function(server) {
     var serverNode = $('#server-' + server.id, svg);
@@ -238,26 +254,24 @@ render.servers = function(serversSame) {
       $('text.term', serverNode).text(server.term);
       serverNode.attr('class', 'server ' + server.state);
       $('circle.background', serverNode)
-        .attr('style', 'fill: ' +
-              (server.state == 'stopped' ? 'gray'
-                : termColors[server.term % termColors.length]));
+        .attr('style', 'fill: ' + chooseNodeColor(server));
       var votesGroup = $('.votes', serverNode);
       votesGroup.empty();
-      if (server.state == 'candidate') {
+      if (server.state === SERVER_STATES.candidate) {
         state.current.servers.forEach(function (peer) {
           var coord = util.circleCoord((peer.id - 1) / NUM_SERVERS,
                                        serverSpec(server.id).cx,
                                        serverSpec(server.id).cy,
                                        serverSpec(server.id).r * 5/8);
           var state;
-          if (peer == server || server.voteGranted[peer.id]) {
+          if (peer === server || server.voteGranted[peer.id]) {
             state = 'have';
-          } else if (peer.votedFor == server.id && peer.term == server.term) {
+          } else if (peer.votedFor === server.id && peer.term === server.term) {
             state = 'coming';
           } else {
             state = 'no';
           }
-          var granted = (peer == server ? true : server.voteGranted[peer.id]);
+          var granted = (peer === server ? true : server.voteGranted[peer.id]);
           votesGroup.append(
             SVG('circle')
               .attr({
@@ -717,7 +731,7 @@ var getLeader = function() {
   var leader = null;
   var term = 0;
   state.current.servers.forEach(function(server) {
-    if (server.state == 'leader' &&
+    if (server.state == SERVER_STATES.leader &&
         server.term > term) {
         leader = server;
         term = server.term;

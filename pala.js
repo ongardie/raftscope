@@ -24,7 +24,8 @@ const SERVER_STATES = {
   follower: 'follower',
   leader: 'leader',
   stopped: 'stopped',
-  candidate: 'candidate'
+  candidate: 'candidate',
+  recovery: 'recovery'
 };
 
 const REQUEST_TYPES = {
@@ -57,6 +58,7 @@ const sendReply = (model, request, reply) => {
     newReply.to = item.id;
     newReply.type = request.type;
     newReply.direction = DIRECTIONS.reply;
+    newReply.blockToVote = reply.blockToVote
     sendMessage(model, newReply);
   })
 };
@@ -80,6 +82,10 @@ pala.server = (id, peers, isLeader) => {
     votedFor: null,
     log: [],
     electionAlarm: isLeader ? 0 : makeElectionAlarm(0),
+    isLeaderPrevState: isLeader,
+    blockHistory: [],
+    blockToVote: 0,
+    votesForBlock: util.makeMap(peers, -1),
     voteGranted:  util.makeMap(peers, false),
     matchIndex:   util.makeMap(peers, 0),
     nextIndex:    util.makeMap(peers, 1),
@@ -96,15 +102,6 @@ const getVotesCount = (server) => Object.values(server.voteGranted).reduce((acc,
   }
   return acc
 }, MIN_COUNT_OF_VOTES)
-
-const stepDown = (model, server, term) => {
-  server.term = term;
-  server.state = SERVER_STATES.follower;
-  server.votedFor = null;
-  if (server.electionAlarm <= model.time || server.electionAlarm === util.Inf) {
-    server.electionAlarm = makeElectionAlarm(model.time);
-  }
-};
 
 rules.startNewElection = (model, server) => {
   const isLeaderExist = model.servers.some(item => item.state === SERVER_STATES.leader)
@@ -143,7 +140,7 @@ rules.becomeLeader = (model, server) => {
         server.nextIndex = util.makeMap(server.peers, server.log.length + 1);
         server.rpcDue       = util.makeMap(server.peers, util.Inf);
         server.heartbeatDue = util.makeMap(server.peers, 0);
-        server.electionAlarm = util.Inf;
+        server.electionAlarm = makeElectionAlarm(model.time);
       }
     clearServer(model, server)
     server.term += 1
@@ -158,29 +155,32 @@ const clearServer = (model, server) => {
   server.heartbeatDue = util.makeMap(server.peers, model.time + ELECTION_TIMEOUT / 2)
 }
 
-rules.sendAppendEntries = (model, server, peer) => {
-  if (server.state === SERVER_STATES.leader &&
-      (server.heartbeatDue[peer] <= model.time ||
-       (server.nextIndex[peer] <= server.log.length &&
-        server.rpcDue[peer] <= model.time))) {
-    const prevIndex = server.nextIndex[peer] - 1;
-    let lastIndex = Math.min(prevIndex + BATCH_SIZE,
-                             server.log.length);
-    if (server.matchIndex[peer] + 1 < server.nextIndex[peer])
-      lastIndex = prevIndex;
-    sendRequest(model, {
-      from: server.id,
-      to: peer,
-      type: REQUEST_TYPES.appendEntries,
-      term: server.term,
-      prevIndex: prevIndex,
-      prevTerm: logTerm(server.log, prevIndex),
-      entries: server.log.slice(prevIndex, lastIndex),
-      commitIndex: Math.min(server.commitIndex, lastIndex)
-    });
-    server.rpcDue[peer] = model.time + RPC_TIMEOUT;
-    server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
-  }
+rules.sendAppendEntries = (model, server) => {
+  server.peers.forEach(peer => {
+    if (server.state === SERVER_STATES.leader &&
+        (server.heartbeatDue[peer] <= model.time ||
+            (server.nextIndex[peer] <= server.log.length &&
+                server.rpcDue[peer] <= model.time))) {
+      const prevIndex = server.nextIndex[peer] - 1;
+      let lastIndex = Math.min(prevIndex + BATCH_SIZE,
+          server.log.length);
+      if (server.matchIndex[peer] + 1 < server.nextIndex[peer])
+        lastIndex = prevIndex;
+      sendRequest(model, {
+        from: server.id,
+        to: peer,
+        type: REQUEST_TYPES.appendEntries,
+        term: server.term,
+        prevIndex: prevIndex,
+        blockToVote: server.blockToVote,
+        prevTerm: logTerm(server.log, prevIndex),
+        entries: server.log.slice(prevIndex, lastIndex),
+        commitIndex: Math.min(server.commitIndex, lastIndex)
+      });
+      server.rpcDue[peer] = model.time + RPC_TIMEOUT;
+      server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
+    }
+  })
 };
 
 rules.advanceCommitIndex = (model, server) => {
@@ -214,14 +214,15 @@ const handleRequestVoteReply = (model, server, reply) => {
   }
 };
 
+const startRecovery = (model, server) => {
+  server.state = SERVER_STATES.recovery
+}
+
 const handleAppendEntriesRequest = (model, server, request) => {
   let success = false;
   let matchIndex = 0;
-  if (server.term < request.term)
-    stepDown(model, server, request.term);
   if (server.term === request.term) {
     server.state = SERVER_STATES.follower;
-    server.electionAlarm = makeElectionAlarm(model.time);
     if (request.prevIndex === 0 ||
         (request.prevIndex <= server.log.length &&
          logTerm(server.log, request.prevIndex) === request.prevTerm)) {
@@ -239,26 +240,55 @@ const handleAppendEntriesRequest = (model, server, request) => {
       server.commitIndex = Math.max(server.commitIndex,
                                     request.commitIndex);
     }
+    // TODO: RECOVERY
+    if(server.blockToVote !== request.blockToVote) {
+      return;
+    }
+    server.electionAlarm = makeElectionAlarm(model.time);
+    sendReply(model, request, {
+      term: server.term,
+      success: success,
+      matchIndex: matchIndex,
+      granted: true,
+      blockToVote: server.blockToVote
+    });
+    return;
   }
-  sendReply(model, request, {
-    term: server.term,
-    success: success,
-    matchIndex: matchIndex,
-    granted: true
-  });
+  startRecovery(model, server)
 };
 
-const handleAppendEntriesReply = (model, server, reply) => {
-  if (server.term < reply.term)
-    stepDown(model, server, reply.term);
-  if (server.state === SERVER_STATES.leader &&
-      server.term === reply.term) {
-    if (reply.success) {
-      server.matchIndex[reply.from] = Math.max(server.matchIndex[reply.from],
-          reply.matchIndex);
+const countVotesForBlock = (server) => Object.values(server.votesForBlock).reduce((acc, item) => {
+  if(item === server.blockToVote) {
+    acc += 1
+  }
+  return acc
+}, server.state === SERVER_STATES.follower ? MIN_COUNT_OF_VOTES + 1 : MIN_COUNT_OF_VOTES)
+
+const createBlockHistory = (server) => {
+  if(countVotesForBlock(server) >= MIN_VOTES_AMOUNT_FOR_MAKING_DECISION) {
+    if(server.blockHistory.find(item => item === server.blockToVote)?.id) {
+      server.votesForBlock = util.makeMap(server.peers, -1)
+      return
     }
-    server.nextIndex[reply.from] = reply.success ? reply.matchIndex + 1 : Math.max(1, server.nextIndex[reply.from] - 1);
-    server.rpcDue[reply.from] = 0;
+    server.blockHistory.push(server.blockToVote)
+    server.blockToVote = server.blockHistory[server.blockHistory.length - 1] + 1
+  }
+}
+
+const handleAppendEntriesReply = (model, server, reply) => {
+  if(server.term === reply.term) {
+    if (server.state === SERVER_STATES.leader) {
+      if (reply.success) {
+        server.matchIndex[reply.from] = Math.max(server.matchIndex[reply.from],
+            reply.matchIndex);
+      }
+      server.nextIndex[reply.from] = reply.success ? reply.matchIndex + 1 : Math.max(1, server.nextIndex[reply.from] - 1);
+      server.rpcDue[reply.from] = 0;
+    }
+    if(server.blockToVote === reply.blockToVote) {
+      server.votesForBlock[reply.from] = reply.blockToVote
+      createBlockHistory(server)
+    }
   }
 };
 
@@ -278,15 +308,14 @@ const handleMessage = (model, server, message) => {
   }
 };
 
-
 pala.update = (model) => {
   model.servers.forEach((server) => {
     rules.startNewElection(model, server);
     rules.becomeLeader(model, server);
     rules.advanceCommitIndex(model, server);
+    rules.sendAppendEntries(model, server);
     server.peers.forEach((peer) => {
       rules.sendRequestVote(model, server, peer);
-      rules.sendAppendEntries(model, server, peer);
     });
   });
   const deliver = [];
@@ -308,13 +337,14 @@ pala.update = (model) => {
 
 pala.stop = (model, server) => {
   clearServer(model, server)
+  server.isLeaderPrevState = server.state === SERVER_STATES.leader
   server.state = SERVER_STATES.stopped;
   server.electionAlarm = 0;
 };
 
 pala.resume = (model, server) => {
   clearServer(model, server)
-  server.state = SERVER_STATES.follower;
+  server.state = server.isLeaderPrevState ? SERVER_STATES.leader : SERVER_STATES.follower;
   server.electionAlarm = makeElectionAlarm(model.time);
 };
 
