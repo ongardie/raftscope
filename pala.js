@@ -203,13 +203,12 @@ const handleRequestVoteRequest = (model, server, request) => {
     server.votedFor = request.from;
     server.electionAlarm = makeElectionAlarm(model.time);
     server.peers.forEach(peerId => {
-      server.voteGranted[peerId] =
-          (
-            server.term === request.term &&
-            server.id === request.to &&
-            peerId === request.from
-          ) ||
-          server.voteGranted[peerId];
+      const isVoteGranted = server.term === request.term &&
+          server.id === request.to &&
+          peerId === request.from
+      if (isVoteGranted) {
+        server.voteGranted[peerId] = isVoteGranted
+      }
     })
   }
 };
