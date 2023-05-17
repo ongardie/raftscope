@@ -3,15 +3,17 @@
 /* jshint devel: true */
 /* jshint jquery: true */
 /* global util */
+/* global START_PROPOSER_IDX */
 'use strict';
 
-const raft = {};
+const pala = {};
 const RPC_TIMEOUT = 50000;
-const MIN_RPC_LATENCY = 10000;
+const MIN_COUNT_OF_VOTES = 1
 const MAX_RPC_LATENCY = 15000;
 const ELECTION_TIMEOUT = 100000;
-const NUM_SERVERS = 5;
+const NUM_SERVERS = 7;
 const BATCH_SIZE = 1;
+const MIN_VOTES_AMOUNT_FOR_MAKING_DECISION = Math.floor(NUM_SERVERS * 2 / 3)
 
 const DIRECTIONS = {
   request: 'request',
@@ -28,18 +30,18 @@ const SERVER_STATES = {
 const REQUEST_TYPES = {
   requestVote: 'RequestVote',
   appendEntries: 'AppendEntries',
+  timeoutMessage: 'TimeoutMessage'
 };
 
 (function() {
 
 const rules = {};
-raft.rules = rules;
+pala.rules = rules;
 
 const sendMessage = (model, message) => {
   message.sendTime = model.time;
   message.recvTime = model.time +
-                     MIN_RPC_LATENCY +
-                     Math.random() * (MAX_RPC_LATENCY - MIN_RPC_LATENCY);
+        MAX_RPC_LATENCY
   model.messages.push(message);
 };
 
@@ -49,11 +51,14 @@ const sendRequest = (model, request) => {
 };
 
 const sendReply = (model, request, reply) => {
-  reply.from = request.to;
-  reply.to = request.from;
-  reply.type = request.type;
-  reply.direction = DIRECTIONS.reply;
-  sendMessage(model, reply);
+  model.servers.filter(item => item.id !== request.to).forEach(item => {
+    const newReply = {...reply}
+    newReply.from = request.to;
+    newReply.to = item.id;
+    newReply.type = request.type;
+    newReply.direction = DIRECTIONS.reply;
+    sendMessage(model, newReply);
+  })
 };
 
 const logTerm = (log, index) => {
@@ -63,19 +68,18 @@ const logTerm = (log, index) => {
 };
 
 const makeElectionAlarm = (now) => {
-  return now + (Math.random() + 1) * ELECTION_TIMEOUT;
+  return now +  ELECTION_TIMEOUT;
 };
 
-raft.server = (id, peers) => {
+pala.server = (id, peers, isLeader) => {
   return {
     id: id,
     peers: peers,
-    state: SERVER_STATES.follower,
+    state: isLeader ? SERVER_STATES.leader : SERVER_STATES.follower,
     term: 1,
     votedFor: null,
     log: [],
-    commitIndex: 0,
-    electionAlarm: makeElectionAlarm(0),
+    electionAlarm: isLeader ? 0 : makeElectionAlarm(0),
     voteGranted:  util.makeMap(peers, false),
     matchIndex:   util.makeMap(peers, 0),
     nextIndex:    util.makeMap(peers, 1),
@@ -83,6 +87,13 @@ raft.server = (id, peers) => {
     heartbeatDue: util.makeMap(peers, 0),
   };
 };
+
+const getNewProposerIdxFromServer = (epoch) => epoch % NUM_SERVERS + 1
+
+const getVotesCount = (server) => Object.values(server.voteGranted).reduce(
+    (acc, item) =>  item ? acc + 1 : acc,
+    MIN_COUNT_OF_VOTES
+)
 
 const stepDown = (model, server, term) => {
   server.term = term;
@@ -94,17 +105,16 @@ const stepDown = (model, server, term) => {
 };
 
 rules.startNewElection = (model, server) => {
-  if ((server.state === SERVER_STATES.follower || server.state === SERVER_STATES.candidate) &&
-      server.electionAlarm <= model.time) {
-    server.electionAlarm = makeElectionAlarm(model.time);
-    server.term += 1;
-    server.votedFor = server.id;
-    server.state = SERVER_STATES.candidate;
-    server.voteGranted  = util.makeMap(server.peers, false);
-    server.matchIndex   = util.makeMap(server.peers, 0);
-    server.nextIndex    = util.makeMap(server.peers, 1);
-    server.rpcDue       = util.makeMap(server.peers, 0);
-    server.heartbeatDue = util.makeMap(server.peers, 0);
+  const isLeaderExist = model.servers.some(item => item.state === SERVER_STATES.leader)
+  if (
+      server.state === SERVER_STATES.follower &&
+      server.electionAlarm <= model.time &&
+      !isLeaderExist
+    ) {
+      clearServer(model, server)
+      server.votedFor = server.id;
+      server.state = SERVER_STATES.candidate;
+      server.rpcDue = util.makeMap(server.peers, model.time)
   }
 };
 
@@ -118,21 +128,40 @@ rules.sendRequestVote = (model, server, peer) => {
       type: REQUEST_TYPES.requestVote,
       term: server.term,
       lastLogTerm: logTerm(server.log, server.log.length),
-      lastLogIndex: server.log.length});
+      lastLogIndex: server.log.length
+    });
   }
 };
 
 rules.becomeLeader = (model, server) => {
-  if (server.state === SERVER_STATES.candidate &&
-      util.countTrue(util.mapValues(server.voteGranted)) + 1 > Math.floor(NUM_SERVERS / 2)) {
-    //console.log('server ' + server.id + ' is leader in term ' + server.term);
-    server.state = SERVER_STATES.leader;
-    server.nextIndex    = util.makeMap(server.peers, server.log.length + 1);
-    server.rpcDue       = util.makeMap(server.peers, util.Inf);
-    server.heartbeatDue = util.makeMap(server.peers, 0);
-    server.electionAlarm = util.Inf;
+  const countOfVotes = getVotesCount(server)
+
+  if(countOfVotes >= MIN_VOTES_AMOUNT_FOR_MAKING_DECISION && server.state === SERVER_STATES.candidate) {
+      const proposerIdx = getNewProposerIdxFromServer(server.term)
+
+      if(server.id === proposerIdx) {
+        server.state = SERVER_STATES.leader
+        server.nextIndex = util.makeMap(server.peers, server.log.length + 1);
+        server.rpcDue       = util.makeMap(server.peers, util.Inf);
+        server.heartbeatDue = util.makeMap(server.peers, 0);
+        server.electionAlarm = util.Inf;
+      }
+    clearServer(model, server)
+    server.term += 1
   }
 };
+
+const clearServer = (model, server) => {
+  server.votedFor = null
+  server.electionAlarm =
+      server.state === SERVER_STATES.leader ||
+      server.state === SERVER_STATES.stopped
+          ? 0
+          : makeElectionAlarm(model.time)
+  server.voteGranted = util.makeMap(server.peers, false)
+  server.rpcDue = util.makeMap(server.peers, model.time + RPC_TIMEOUT)
+  server.heartbeatDue = util.makeMap(server.peers, model.time + ELECTION_TIMEOUT / 2)
+}
 
 rules.sendAppendEntries = (model, server, peer) => {
   if (server.state === SERVER_STATES.leader &&
@@ -170,28 +199,21 @@ rules.advanceCommitIndex = (model, server) => {
 };
 
 const handleRequestVoteRequest = (model, server, request) => {
-  if (server.term < request.term)
-    stepDown(model, server, request.term);
-  let granted = false;
-  if (server.term === request.term &&
-      (server.votedFor === null ||
-       server.votedFor === request.from) &&
-      (request.lastLogTerm > logTerm(server.log, server.log.length) ||
-       (request.lastLogTerm === logTerm(server.log, server.log.length) &&
-        request.lastLogIndex >= server.log.length))) {
-    granted = true;
+  if (server.state === SERVER_STATES.candidate) {
     server.votedFor = request.from;
     server.electionAlarm = makeElectionAlarm(model.time);
+    server.peers.forEach(peerId => {
+      const isVoteGranted = server.term === request.term &&
+          server.id === request.to &&
+          peerId === request.from
+      if (isVoteGranted) {
+        server.voteGranted[peerId] = isVoteGranted
+      }
+    })
   }
-  sendReply(model, request, {
-    term: server.term,
-    granted: granted,
-  });
 };
 
 const handleRequestVoteReply = (model, server, reply) => {
-  if (server.term < reply.term)
-    stepDown(model, server, reply.term);
   if (server.state === SERVER_STATES.candidate &&
       server.term === reply.term) {
     server.rpcDue[reply.from] = util.Inf;
@@ -210,7 +232,7 @@ const handleAppendEntriesRequest = (model, server, request) => {
     if (request.prevIndex === 0 ||
         (request.prevIndex <= server.log.length &&
          logTerm(server.log, request.prevIndex) === request.prevTerm)) {
-      success = true;
+    success = true;
       let index = request.prevIndex;
       for (let i = 0; i < request.entries.length; i += 1) {
         index += 1;
@@ -229,6 +251,7 @@ const handleAppendEntriesRequest = (model, server, request) => {
     term: server.term,
     success: success,
     matchIndex: matchIndex,
+    granted: true
   });
 };
 
@@ -239,7 +262,7 @@ const handleAppendEntriesReply = (model, server, reply) => {
       server.term === reply.term) {
     if (reply.success) {
       server.matchIndex[reply.from] = Math.max(server.matchIndex[reply.from],
-                                               reply.matchIndex);
+          reply.matchIndex);
     }
     server.nextIndex[reply.from] = reply.success ? reply.matchIndex + 1 : Math.max(1, server.nextIndex[reply.from] - 1);
     server.rpcDue[reply.from] = 0;
@@ -263,7 +286,7 @@ const handleMessage = (model, server, message) => {
 };
 
 
-raft.update = (model) => {
+pala.update = (model) => {
   model.servers.forEach((server) => {
     rules.startNewElection(model, server);
     rules.becomeLeader(model, server);
@@ -290,45 +313,47 @@ raft.update = (model) => {
   });
 };
 
-raft.stop = (model, server) => {
+pala.stop = (model, server) => {
+  clearServer(model, server)
   server.state = SERVER_STATES.stopped;
   server.electionAlarm = 0;
 };
 
-raft.resume = (model, server) => {
+pala.resume = (model, server) => {
+  clearServer(model, server)
   server.state = SERVER_STATES.follower;
   server.electionAlarm = makeElectionAlarm(model.time);
 };
 
-raft.resumeAll = (model) => {
+pala.resumeAll = (model) => {
   model.servers.forEach((server) => {
-    raft.resume(model, server);
+    pala.resume(model, server);
   });
 };
 
-raft.restart = (model, server) => {
-  raft.stop(model, server);
-  raft.resume(model, server);
+pala.restart = (model, server) => {
+  pala.stop(model, server);
+  pala.resume(model, server);
 };
 
-raft.drop = (model, message) => {
+pala.drop = (model, message) => {
   model.messages = model.messages.filter((msg) => msg !== message);
 };
 
-raft.timeout = (model, server) => {
+pala.timeout = (model, server) => {
   server.state = SERVER_STATES.follower;
   server.electionAlarm = 0;
   rules.startNewElection(model, server);
 };
 
-raft.clientRequest = (model, server) => {
+pala.clientRequest = (model, server) => {
   if (server.state === SERVER_STATES.leader) {
     server.log.push({term: server.term,
                      value: 'v'});
   }
 };
 
-raft.spreadTimers = (model) => {
+pala.spreadTimers = (model) => {
   const timers = [];
   model.servers.forEach((server) => {
     if (server.electionAlarm > model.time &&
@@ -358,8 +383,8 @@ raft.spreadTimers = (model) => {
   }
 };
 
-raft.alignTimers = (model) => {
-  raft.spreadTimers(model);
+pala.alignTimers = (model) => {
+  pala.spreadTimers(model);
   const timers = [];
   model.servers.forEach((server) => {
     if (server.electionAlarm > model.time &&
@@ -376,13 +401,13 @@ raft.alignTimers = (model) => {
   });
 };
 
-raft.setupLogReplicationScenario = (model) => {
+pala.setupLogReplicationScenario = (model) => {
   const s1 = model.servers[0];
-  raft.restart(model, model.servers[1]);
-  raft.restart(model, model.servers[2]);
-  raft.restart(model, model.servers[3]);
-  raft.restart(model, model.servers[4]);
-  raft.timeout(model, model.servers[0]);
+  pala.restart(model, model.servers[1]);
+  pala.restart(model, model.servers[2]);
+  pala.restart(model, model.servers[3]);
+  pala.restart(model, model.servers[4]);
+  pala.timeout(model, model.servers[0]);
   rules.startNewElection(model, s1);
   model.servers[1].term = 2;
   model.servers[2].term = 2;
@@ -393,13 +418,12 @@ raft.setupLogReplicationScenario = (model) => {
   model.servers[3].votedFor = 1;
   model.servers[4].votedFor = 1;
   s1.voteGranted = util.makeMap(s1.peers, true);
-  raft.stop(model, model.servers[2]);
-  raft.stop(model, model.servers[3]);
-  raft.stop(model, model.servers[4]);
+  pala.stop(model, model.servers[2]);
+  pala.stop(model, model.servers[3]);
+  pala.stop(model, model.servers[4]);
   rules.becomeLeader(model, s1);
-  raft.clientRequest(model, s1);
-  raft.clientRequest(model, s1);
-  raft.clientRequest(model, s1);
+  pala.clientRequest(model, s1);
+  pala.clientRequest(model, s1);
+  pala.clientRequest(model, s1);
 };
-
 })();
