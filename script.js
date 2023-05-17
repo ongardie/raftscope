@@ -93,7 +93,8 @@ playback = function() {
         if (i !== j)
           peers.push(j);
       }
-      state.current.servers.push(pala.server(i, peers, i === START_PROPOSER_IDX, i === START_PROPOSER_IDX ? START_PROPOSER_IDX : undefined));
+      const isProposer = i === START_PROPOSER_IDX
+      state.current.servers.push(pala.server(i, peers, isProposer, isProposer ? START_PROPOSER_IDX : undefined));
   }
 })();
 

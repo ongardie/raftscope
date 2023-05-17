@@ -90,12 +90,10 @@ pala.server = (id, peers, isLeader) => {
 
 const getNewProposerIdxFromServer = (epoch) => epoch % NUM_SERVERS + 1
 
-const getVotesCount = (server) => Object.values(server.voteGranted).reduce((acc, item) => {
-  if(item) {
-    acc += 1
-  }
-  return acc
-}, MIN_COUNT_OF_VOTES)
+const getVotesCount = (server) => Object.values(server.voteGranted).reduce(
+    (acc, item) =>  item ? acc + 1 : acc,
+    MIN_COUNT_OF_VOTES
+)
 
 const stepDown = (model, server, term) => {
   server.term = term;
@@ -108,12 +106,15 @@ const stepDown = (model, server, term) => {
 
 rules.startNewElection = (model, server) => {
   const isLeaderExist = model.servers.some(item => item.state === SERVER_STATES.leader)
-  if ((server.state === SERVER_STATES.follower) &&
-      server.electionAlarm <= model.time && !isLeaderExist) {
-    clearServer(model, server)
-    server.votedFor = server.id;
-    server.state = SERVER_STATES.candidate;
-    server.rpcDue = util.makeMap(server.peers, model.time)
+  if (
+      server.state === SERVER_STATES.follower &&
+      server.electionAlarm <= model.time &&
+      !isLeaderExist
+    ) {
+      clearServer(model, server)
+      server.votedFor = server.id;
+      server.state = SERVER_STATES.candidate;
+      server.rpcDue = util.makeMap(server.peers, model.time)
   }
 };
 
@@ -152,7 +153,11 @@ rules.becomeLeader = (model, server) => {
 
 const clearServer = (model, server) => {
   server.votedFor = null
-  server.electionAlarm = server.state === SERVER_STATES.leader || server.state === SERVER_STATES.stopped ? 0 : makeElectionAlarm(model.time)
+  server.electionAlarm =
+      server.state === SERVER_STATES.leader ||
+      server.state === SERVER_STATES.stopped
+          ? 0
+          : makeElectionAlarm(model.time)
   server.voteGranted = util.makeMap(server.peers, false)
   server.rpcDue = util.makeMap(server.peers, model.time + RPC_TIMEOUT)
   server.heartbeatDue = util.makeMap(server.peers, model.time + ELECTION_TIMEOUT / 2)
@@ -199,9 +204,12 @@ const handleRequestVoteRequest = (model, server, request) => {
     server.electionAlarm = makeElectionAlarm(model.time);
     server.peers.forEach(peerId => {
       server.voteGranted[peerId] =
-          (server.term === request.term &&
-              server.id === request.to &&
-          peerId === request.from) || server.voteGranted[peerId];
+          (
+            server.term === request.term &&
+            server.id === request.to &&
+            peerId === request.from
+          ) ||
+          server.voteGranted[peerId];
     })
   }
 };
