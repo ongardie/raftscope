@@ -8,6 +8,9 @@
 /* global ELECTION_TIMEOUT */
 /* global NUM_SERVERS */
 /* global SERVER_STATES */
+/* global REQUEST_TYPES */
+/* global MESSAGE_DIRECTIONS */
+
 'use strict';
 
 const START_PROPOSER_IDX = 1
@@ -239,7 +242,7 @@ const chooseNodeColor = (server) => {
   if(server.state === SERVER_STATES.recovery) {
     return termColors[TERM_COLORS.recovery]
   }
-  return termColors[server.term % termColors.length]
+  return termColors[server.epoch % termColors.length]
 }
 
 render.servers = function(serversSame) {
@@ -251,7 +254,7 @@ render.servers = function(serversSame) {
                     (ELECTION_TIMEOUT * 2),
                     0, 1)));
     if (!serversSame) {
-      $('text.term', serverNode).text(server.term);
+      $('text.term', serverNode).text(server.epoch);
       serverNode.attr('class', 'server ' + server.state);
       $('circle.background', serverNode)
         .attr('style', 'fill: ' + chooseNodeColor(server));
@@ -266,7 +269,7 @@ render.servers = function(serversSame) {
           var state;
           if (peer === server || server.voteGranted[peer.id]) {
             state = 'have';
-          } else if (peer.votedFor === server.id && peer.term === server.term) {
+          } else if (peer.votedFor === server.id && peer.epoch === server.epoch) {
             state = 'coming';
           } else {
             state = 'no';
@@ -322,11 +325,11 @@ render.entry = function(spec, entry, committed) {
     .append(SVG('rect')
       .attr(spec)
       .attr('stroke-dasharray', committed ? '1 0' : '5 5')
-      .attr('style', 'fill: ' + termColors[entry.term % termColors.length]))
+      .attr('style', 'fill: ' + termColors[entry.epoch % termColors.length]))
     .append(SVG('text')
       .attr({x: spec.x + spec.width / 2,
              y: spec.y + spec.height / 2})
-      .text(entry.term));
+      .text(entry.epoch));
 };
 
 render.logs = function() {
@@ -426,7 +429,7 @@ render.messages = function(messagesSame) {
           .attr('title', message.type + ' ' + message.direction)//.tooltip({container: 'body'})
           .append(SVG('circle'))
           .append(SVG('path').attr('class', 'message-direction'));
-      if (message.direction == 'reply')
+      if (message.direction === MESSAGE_DIRECTIONS.reply)
         a.append(SVG('path').attr('class', 'message-success'));
       messagesGroup.append(a);
     });
@@ -464,24 +467,24 @@ render.messages = function(messagesSame) {
     });
   }
   state.current.messages.forEach(function(message, i) {
-    var s = messageSpec(message.from, message.to,
+    const s = messageSpec(message.from, message.to,
                         (state.current.time - message.sendTime) /
                         (message.recvTime - message.sendTime));
     $('#message-' + i + ' circle', messagesGroup)
       .attr(s);
-    if (message.direction == 'reply') {
-      var dlist = [];
+    if (message.direction === MESSAGE_DIRECTIONS.reply) {
+      const dlist = [];
       dlist.push('M', s.cx - s.r, comma, s.cy,
                  'L', s.cx + s.r, comma, s.cy);
-      if ((message.type == 'RequestVote' && message.granted) ||
-          (message.type == 'AppendEntries' && message.success)) {
+      if ((message.type === REQUEST_TYPES.requestVote && message.granted) ||
+          (message.type === REQUEST_TYPES.appendEntries && message.success)) {
          dlist.push('M', s.cx, comma, s.cy - s.r,
                     'L', s.cx, comma, s.cy + s.r);
       }
       $('#message-' + i + ' path.message-success', messagesGroup)
         .attr('d', dlist.join(' '));
     }
-    var dir = $('#message-' + i + ' path.message-direction', messagesGroup);
+    const dir = $('#message-' + i + ' path.message-direction', messagesGroup);
     if (playback.isPaused()) {
       dir.attr('style', 'marker-end:url(#TriangleOutS-' + message.type + ')')
          .attr('d',
@@ -495,7 +498,7 @@ render.messages = function(messagesSame) {
 };
 
 var relTime = function(time, now) {
-  if (time == util.Inf)
+  if (time === util.Inf)
     return 'infinity';
   var sign = time > now ? '+' : '';
   return sign + ((time - now) / 1e3).toFixed(3) + 'ms';
@@ -537,7 +540,7 @@ serverModal = function(model, server) {
     .empty()
     .append($('<dl class="dl-horizontal"></dl>')
       .append(li('state', server.state))
-      .append(li('currentTerm', server.term))
+      .append(li('currentEpoch', server.epoch))
       .append(li('votedFor', server.votedFor))
       .append(li('commitIndex', server.commitIndex))
       .append(li('electionAlarm', relTime(server.electionAlarm, model.time)))
@@ -571,18 +574,18 @@ messageModal = function(model, message) {
       .append(li('to', 'S' + message.to))
       .append(li('sent', relTime(message.sendTime, model.time)))
       .append(li('deliver', relTime(message.recvTime, model.time)))
-      .append(li('term', message.term));
-  if (message.type == 'RequestVote') {
-    if (message.direction == 'request') {
+      .append(li('epoch', message.epoch));
+  if (message.type === REQUEST_TYPES.requestVote) {
+    if (message.direction === MESSAGE_DIRECTIONS.request) {
       fields.append(li('lastLogIndex', message.lastLogIndex));
       fields.append(li('lastLogTerm', message.lastLogTerm));
     } else {
       fields.append(li('granted', message.granted));
     }
-  } else if (message.type == 'AppendEntries') {
-    if (message.direction == 'request') {
+  } else if (message.type === REQUEST_TYPES.appendEntries) {
+    if (message.direction === MESSAGE_DIRECTIONS.request) {
       var entries = '[' + message.entries.map(function(e) {
-            return e.term;
+            return e.epoch;
       }).join(' ') + ']';
       fields.append(li('prevIndex', message.prevIndex));
       fields.append(li('prevTerm', message.prevTerm));
@@ -729,12 +732,12 @@ $('#modal-details').on('show.bs.modal', function(e) {
 
 var getLeader = function() {
   var leader = null;
-  var term = 0;
+  var epoch = 0;
   state.current.servers.forEach(function(server) {
     if (server.state == SERVER_STATES.leader &&
-        server.term > term) {
+        server.epoch > epoch) {
         leader = server;
-        term = server.term;
+        epoch = server.epoch;
     }
   });
   return leader;

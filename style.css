@@ -98,7 +98,7 @@ svg .message.AppendEntries {
   stroke: #fc8d62;
 }
 
-svg .message.TimeoutMessage {
+svg .message.RecoveryMessage {
   fill:   #4253fc;
   stroke: #4253fc;
 }
