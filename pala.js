@@ -7,11 +7,10 @@
 'use strict';
 
 const pala = {};
-const RPC_TIMEOUT = 50000;
+const RPC_TIMEOUT = 100000;
 const MIN_COUNT_OF_VOTES = 1
 const RPC_LATENCY = 15000;
-const FAST_RPC_LATENCY = 5000;
-const ELECTION_TIMEOUT = 100000;
+const ELECTION_TIMEOUT = 150000;
 const NUM_SERVERS = 7;
 const BATCH_SIZE = 1;
 const MIN_VOTES_AMOUNT_FOR_MAKING_DECISION = Math.floor(NUM_SERVERS * 2 / 3)
@@ -40,19 +39,18 @@ const REQUEST_TYPES = {
 const rules = {};
 pala.rules = rules;
 
-const sendMessage = (model, message, isFast = false) => {
+const sendMessage = (model, message) => {
   message.sendTime = model.time;
-  message.recvTime = model.time +
-      (isFast ? FAST_RPC_LATENCY : RPC_LATENCY)
+  message.recvTime = model.time + RPC_LATENCY
   model.messages.push(message);
 };
 
-const sendRequest = (model, request, isFast = false) => {
+const sendRequest = (model, request) => {
   request.direction = MESSAGE_DIRECTIONS.request;
-  sendMessage(model, request, isFast);
+  sendMessage(model, request);
 };
 
-const sendReply = (model, messageTo, request, reply, isFast = false) => {
+const sendReply = (model, messageTo, request, reply) => {
   const newReply = {...reply}
   newReply.from = request.to;
   newReply.to = messageTo;
@@ -60,12 +58,12 @@ const sendReply = (model, messageTo, request, reply, isFast = false) => {
   newReply.direction = MESSAGE_DIRECTIONS.reply;
   newReply.blockToVote = reply?.blockToVote
   newReply.replyBlock = reply?.replyBlock
-  sendMessage(model, newReply, isFast);
+  sendMessage(model, newReply);
 }
 
-const sendMultiReply = (model, request, reply, isFast = false) => {
+const sendMultiReply = (model, request, reply) => {
   model.servers.filter(item => item.id !== request.to).forEach(item => {
-    sendReply(model, item.id, request, reply, isFast)
+    sendReply(model, item.id, request, reply)
   })
 };
 
@@ -79,11 +77,14 @@ const makeElectionAlarm = (now) => {
   return now +  ELECTION_TIMEOUT;
 };
 
-const makeRecoveryPathsArray = (peers, id) => {
-  const greaterThanId = peers.filter(item => item > id) ?? []
-  const lowerThanId = peers.filter(item => item < id) ?? []
-  return [ ...greaterThanId, ...lowerThanId ]
+const isRecoveryEnded = (server) => {
+  return server.recoveryPaths.reduce((acc, item) => {
+    if(Object.values(item)[0]) acc += 1
+    return acc
+  }, 1) === NUM_SERVERS
 }
+
+const getNextServerIdx = id => id + 1 > NUM_SERVERS ? 1 : id + 1
 
 pala.server = (id, peers, isLeader) => {
   return {
@@ -97,6 +98,9 @@ pala.server = (id, peers, isLeader) => {
     blockHistory: [],
     blockToVote: 0,
     recoveryTimeout: 0,
+    isRecoveryEndedForCurrentServer: true,
+    currentRecoveryId: getNextServerIdx(id),
+    recoveryPaths: util.makeMap(peers, false),
     electionAlarm: makeElectionAlarm(0),
     votesForBlock: util.makeMap(peers, -1),
     voteGranted:  util.makeMap(peers, false),
@@ -204,6 +208,7 @@ rules.sendAppendEntries = (model, server) => {
 
 rules.sendRecoveryRequest = (model, server) => {
   if(server.state === SERVER_STATES.recovery && server.electionAlarm <= model.time) {
+    console.log(server, 'reply')
     const lastBlock = server.blockHistory[server.blockHistory.length - 1]?.block
     sendRequest(model, {
       from: server.id,
@@ -226,11 +231,11 @@ const handleRecoveryRequest = (model, server, request) => {
 }
 
 const handleRecoveryReply = (model, server, reply) => {
-  if(reply.replyBlock) {
-    server.epoch = reply.replyBlock.epoch
-    server.blockHistory.push(reply.replyBlock)
-    server.electionAlarm = 0
-  }
+    if(reply.replyBlock) {
+      server.epoch = reply.replyBlock.epoch
+      server.blockHistory.push(reply.replyBlock)
+      server.electionAlarm = 0
+    }
 }
 
 rules.advanceCommitIndex = (model, server) => {
@@ -277,7 +282,9 @@ const handleAppendEntriesRequest = (model, server, request) => {
       server.electionAlarm = 0
       return
     }
-    server.state = SERVER_STATES.follower;
+    if(server.state !== SERVER_STATES.recovery) {
+      server.state = SERVER_STATES.follower;
+    }
     if (request.prevIndex === 0 ||
         (request.prevIndex <= server.log.length &&
          logTerm(server.log, request.prevIndex) === request.prevTerm)) {
@@ -295,6 +302,7 @@ const handleAppendEntriesRequest = (model, server, request) => {
       server.commitIndex = Math.max(server.commitIndex,
                                     request.commitIndex);
     }
+    if(server.state === SERVER_STATES.recovery) return;
     server.electionAlarm = makeElectionAlarm(model.time);
     sendMultiReply(model, request, {
       epoch: server.epoch,
