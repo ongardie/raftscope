@@ -260,7 +260,7 @@ render.servers = function(serversSame) {
         .attr('style', 'fill: ' + chooseNodeColor(server));
       var votesGroup = $('.votes', serverNode);
       votesGroup.empty();
-      if (server.state === SERVER_STATES.candidate) {
+      if (server.state === SERVER_STATES.recovery) {
         state.current.servers.forEach(function (peer) {
           var coord = util.circleCoord((peer.id - 1) / NUM_SERVERS,
                                        serverSpec(server.id).cx,

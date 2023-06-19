@@ -75,7 +75,7 @@ svg .server .votes .have {
 }
 
 svg .server .votes .coming {
-  fill: gray;
+  fill: none;
   stroke: black;
 }
 
@@ -101,6 +101,11 @@ svg .message.AppendEntries {
 svg .message.RecoveryMessage {
   fill:   #4253fc;
   stroke: #4253fc;
+}
+
+svg .message.EpochChanging {
+  fill:   #ffdd33;
+  stroke: #ffdd33;
 }
 
 svg .message.request circle {
