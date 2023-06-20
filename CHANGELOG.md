@@ -9,6 +9,7 @@ for further information about branching and tagging conventions.
 
 ## [0.1.0-rc.0] - 2022-05-15
 #### Added
+- Recovery flow
 - Voting for new epoch
 - Selecting a new proposer after voting
 

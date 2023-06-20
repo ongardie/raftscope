@@ -9,6 +9,7 @@
 const pala = {};
 const RPC_TIMEOUT = 100000;
 const MIN_COUNT_OF_VOTES = 1
+const FIRST_NODE_IDX = 1
 const RPC_LATENCY = 10000;
 const ELECTION_TIMEOUT = 150000;
 const NUM_SERVERS = 7;
@@ -82,10 +83,29 @@ const isRecoveryEnded = (server) => {
   return Object.values(server.recoveryPaths).reduce((acc, item) => {
     if(item) acc += 1
     return acc
-  }, 1) === NUM_SERVERS
+  }, MIN_COUNT_OF_VOTES) === NUM_SERVERS
 }
 
-const getNextServerIdx = id => id === NUM_SERVERS ? 1 : (id + 1)
+const getNextServerIdx = id => id === NUM_SERVERS ? FIRST_NODE_IDX : (id + 1);
+
+const getNewProposerIdxFromServer = (epoch) => epoch ? epoch % NUM_SERVERS : FIRST_NODE_IDX
+
+const getVotesCount = (server) => Object.values(server.voteGranted).reduce((acc, item) => {
+  if(item) {
+    acc += 1
+  }
+  return acc
+}, MIN_COUNT_OF_VOTES)
+
+const countVotesForBlock = (server) => Object.values(server.votesForBlock).reduce((acc, item) => {
+  if(item === server.blockToVote) {
+    acc += 1
+  }
+  return acc
+ }, server.state !== SERVER_STATES.leader
+    ? MIN_COUNT_OF_VOTES + 1
+    : MIN_COUNT_OF_VOTES
+)
 
 pala.server = (id, peers, isLeader) => {
   return {
@@ -114,25 +134,6 @@ pala.server = (id, peers, isLeader) => {
     heartbeatDue: util.makeMap(peers, 0),
   };
 };
-
-const getNewProposerIdxFromServer = (epoch) => epoch ? epoch % NUM_SERVERS : NUM_SERVERS
-
-const getVotesCount = (server) => Object.values(server.voteGranted).reduce((acc, item) => {
-  if(item) {
-    acc += 1
-  }
-  return acc
-}, MIN_COUNT_OF_VOTES)
-
-const countVotesForBlock = (server) => Object.values(server.votesForBlock).reduce((acc, item) => {
-  if(item === server.blockToVote) {
-    acc += 1
-  }
-  return acc
-}, server.state !== SERVER_STATES.leader
-    ? MIN_COUNT_OF_VOTES + 1
-    : MIN_COUNT_OF_VOTES
-)
 
 const onEndOfRecovery = (model, server) => {
     server.isRecoveryEndedForCurrentServer = false
@@ -164,11 +165,11 @@ rules.startNewElection = (model, server) => {
       server.isRecoveryMessageSent = false
       if(isRecoveryEnded(server)) {
         onEndOfRecovery(model, server)
-        return;
+        return
       }
       const nextRecoveryIndex = getNextServerIdx(server.currentRecoveryId)
       server.currentRecoveryId = nextRecoveryIndex === server.id ? getNextServerIdx(server.id) : nextRecoveryIndex
-      return;
+      return
     }
     if(server.isRecoveryEndedForCurrentServer) {
       if(isRecoveryEnded(server)) {
@@ -211,7 +212,7 @@ rules.becomeLeader = (model, server) => {
       server.epochChangingMessage.isCanBeSent = true
       server.state = server.id === getNewProposerIdxFromServer(server.epoch) ? SERVER_STATES.leader : SERVER_STATES.follower
       clearServer(model, server)
-      return;
+      return
     }
     if(!server.epochChangingMessage.isCanBeSent) {
       server.epochChangingMessage.isCanBeSent = false
@@ -276,7 +277,12 @@ rules.sendRecoveryRequest = (model, server) => {
 }
 
 rules.sendEpochChangingRequest = (model, server, recipientId) => {
-  if(server.epochChangingMessage.isSent && server.epochChangingMessage.isCanBeSent && server.state !== SERVER_STATES.stopped && server.state !== SERVER_STATES.recovery) {
+  if(
+      server.epochChangingMessage.isSent &&
+      server.epochChangingMessage.isCanBeSent &&
+      server.state !== SERVER_STATES.stopped &&
+      server.state !== SERVER_STATES.recovery
+  ) {
     sendRequest(model, {
       type: REQUEST_TYPES.epochChanging,
       from: server.id,
@@ -309,7 +315,7 @@ const handleRecoveryRequest = (model, server, request) => {
     requestor.isRecoveryMessageSent = false
     requestor.isRecoveryEndedForCurrentServer = true
     requestor.electionAlarm = 0
-    return;
+    return
   }
   sendReply(model, request.from, request, {
     epoch: server.epoch,
@@ -386,7 +392,7 @@ const handleAppendEntriesRequest = (model, server, request) => {
       server.commitIndex = Math.max(server.commitIndex,
                                     request.commitIndex);
     }
-    if(server.state === SERVER_STATES.recovery) return;
+    if(server.state === SERVER_STATES.recovery) return
     sendMultiReply(model, request, {
       epoch: server.epoch,
       success: success,
@@ -441,12 +447,12 @@ const handleMessage = (model, server, message) => {
         : handleRecoveryReply(model, server, message)
   }
   if (server.state === SERVER_STATES.stopped)
-    return;
+    return
   if (message.type === REQUEST_TYPES.requestVote) {
     message.direction === MESSAGE_DIRECTIONS.request
         ? handleRequestVoteRequest(model, server, message)
         :  handleRequestVoteReply(model, server, message);
-    return;
+    return
   }
   if (message.type === REQUEST_TYPES.appendEntries) {
     message.direction === MESSAGE_DIRECTIONS.request
@@ -553,7 +559,7 @@ pala.spreadTimers = (model) => {
           console.log('adjusted S' + server.id + ' timeout forward');
         }
       });
-      return;
+      return
     }
     model.servers.forEach((server) => {
       if (server.electionAlarm > timers[0] &&
