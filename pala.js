@@ -15,6 +15,7 @@ const ELECTION_TIMEOUT = 150000;
 const NUM_SERVERS = 7;
 const BATCH_SIZE = 1;
 const MIN_VOTES_AMOUNT_FOR_MAKING_DECISION = Math.ceil(NUM_SERVERS * 2 / 3)
+const K_BLOCKS = 2
 
 const MESSAGE_DIRECTIONS = {
   request: 'request',
@@ -119,10 +120,12 @@ pala.server = (id, peers, isLeader) => {
     blockHistory: [],
     blockToVote: 0,
     recoveryTimeout: 0,
+    commitIndex: 0,
     lastAddedBlockDuringRecovery: -1,
     isRecoveryEndedForCurrentServer: false,
     isRecoveryMessageSent: false,
     epochChangingMessage: { isSent: false, isCanBeSent: true, epochToChange: 0 },
+    requestInfo: { isRequestWasSent: false, blocksAfterRequestCount: 0 },
     currentRecoveryId: getNextServerIdx(id),
     recoveryPaths: util.makeMap(peers, false),
     electionAlarm: makeElectionAlarm(0),
@@ -202,7 +205,6 @@ rules.becomeLeader = (model, server) => {
   server.epochChangingMessage.isSent = false
   if(isRecoveryEnded(server)) {
     const countOfVotes = getVotesCount(server)
-    server.nextIndex = util.makeMap(server.peers, server.log.length + 1);
     server.voteGranted = util.makeMap(server.peers, false)
     server.recoveryPaths = util.makeMap(server.peers, false)
     server.isRecoveryEndedForCurrentServer = false
@@ -234,9 +236,7 @@ const clearServer = (model, server) => {
 rules.sendAppendEntries = (model, server) => {
   server.peers.forEach(peer => {
     if(server.state === SERVER_STATES.leader) {
-      if ((server.heartbeatDue[peer] <= model.time ||
-          (server.nextIndex[peer] <= server.log.length &&
-              server.rpcDue[peer] <= model.time))) {
+      if ((server.heartbeatDue[peer] <= model.time)) {
         const prevIndex = server.nextIndex[peer] - 1;
         let lastIndex = Math.min(prevIndex + BATCH_SIZE,
             server.log.length);
@@ -335,6 +335,14 @@ const handleRecoveryReply = (model, server, reply) => {
       server.blockHistory.push(reply.replyBlock)
       server.isRecoveryEndedForCurrentServer = false
       server.blockToVote = server.blockHistory[server.blockHistory.length - 1].block + 1
+      server.commitIndex = reply.replyBlock.commitIndex
+      server.log = reply.replyBlock.log
+      model.servers.forEach(serv => {
+        if(serv.state !== SERVER_STATES.stopped) {
+          serv.nextIndex[server.id] = server.commitIndex + 1
+          serv.matchIndex[server.id] = server.commitIndex
+        }
+      })
       return
     }
     server.isRecoveryEndedForCurrentServer = true
@@ -403,23 +411,43 @@ const handleAppendEntriesRequest = (model, server, request) => {
   }
 };
 
+const createBlocksTable = (model, server, reply) => {
+  if(server.requestInfo.blocksAfterRequestCount < K_BLOCKS) {
+    server.requestInfo.blocksAfterRequestCount += 1
+    return;
+  }
+  if(server.state !== SERVER_STATES.stopped &&
+      server.state !== SERVER_STATES.recovery && server.blockToVote === reply.blockToVote) {
+    server.commitIndex += 1
+    const activePeers = server.peers.filter(servId => model.servers.find(item => item.id === servId)?.state !== SERVER_STATES.stopped )
+    activePeers.forEach(peer => server.matchIndex[peer] = Math.max(server.matchIndex[reply.from],
+        reply.matchIndex))
+    server.requestInfo.isRequestWasSent = false
+  }
+}
+
 const handleAppendEntriesReply = (model, server, reply) => {
   if((server.epoch === reply.epoch && server.blockToVote === reply.blockToVote) || server.state === SERVER_STATES.recovery) {
     server.blockToVote = reply.blockToVote
     server.votesForBlock[reply.from] = reply.blockToVote
     const isBlockNotarized = countVotesForBlock(server) >= MIN_VOTES_AMOUNT_FOR_MAKING_DECISION
+    if(isBlockNotarized && server.requestInfo.isRequestWasSent) {
+      createBlocksTable(model, server, reply)
+    }
     if(server.state === SERVER_STATES.recovery && isBlockNotarized) {
       server.lastAddedBlockDuringRecovery = reply.blockToVote
       return
     }
-    if (server.state === SERVER_STATES.leader) {
-      if (reply.success && isBlockNotarized) {
-        server.matchIndex[reply.from] = Math.max(server.matchIndex[reply.from],
-            reply.matchIndex);
+    if (server.state === SERVER_STATES.leader && reply.success && isBlockNotarized) {
         server.electionAlarm = makeElectionAlarm(model.time)
-      }
-      server.nextIndex[reply.from] = reply.success ? reply.matchIndex + 1 : Math.max(1, server.nextIndex[reply.from] - 1);
-      server.rpcDue[reply.from] = 0;
+        server.rpcDue = util.makeMap(server.peers, 0)
+        const activePeers = server.peers.filter(servId => {
+          const foundServer = model.servers.find(item => item.id === servId)
+          return foundServer?.state !== SERVER_STATES.stopped &&
+              foundServer?.state !== SERVER_STATES.recovery &&
+              server.blockToVote - foundServer.blockToVote <= 1
+        } )
+        activePeers.forEach(peer => server.nextIndex[peer] = Math.max(server.matchIndex[peer], reply.matchIndex + 1))
     }
     if(server.state === SERVER_STATES.follower && isBlockNotarized) {
       server.electionAlarm = makeElectionAlarm(model.time)
@@ -435,7 +463,14 @@ const createBlockHistory = (server) => {
       server.votesForBlock = util.makeMap(server.peers, -1)
       return
     }
-    server.blockHistory.push({ block: server.blockToVote, epoch: server.epoch })
+    server.blockHistory.push({
+      block: server.blockToVote,
+      epoch: server.epoch,
+      nextIndex: {...server.nextIndex},
+      matchIndex: {...server.matchIndex},
+      commitIndex: server.commitIndex,
+      log: [...server.log]
+    })
     server.blockToVote = server.blockHistory[server.blockHistory.length - 1].block + 1
   }
 }
@@ -536,6 +571,13 @@ pala.timeout = (model, server) => {
 
 pala.clientRequest = (model, server) => {
   if (server.state === SERVER_STATES.leader) {
+    server.heartbeatDue = util.makeMap(server.peers, 0)
+    model.servers.forEach(serv => {
+      if(serv.state !== SERVER_STATES.stopped) {
+        serv.requestInfo.blocksAfterRequestCount = 0
+        serv.requestInfo.isRequestWasSent = true
+      }
+    })
     server.log.push({epoch: server.epoch,
                      value: 'v'});
   }

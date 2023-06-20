@@ -400,7 +400,7 @@ render.logs = function() {
              entry,
              index <= server.commitIndex));
     });
-    if (leader !== null && leader != server) {
+    if (leader !== null && leader !== server) {
       log.append(
         SVG('circle')
           .attr('title', 'match index')//.tooltip({container: 'body'})
