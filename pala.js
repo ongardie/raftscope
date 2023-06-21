@@ -233,34 +233,6 @@ const clearServer = (model, server) => {
   server.heartbeatDue = util.makeMap(server.peers, 0)
 }
 
-rules.sendAppendEntries = (model, server) => {
-  server.peers.forEach(peer => {
-    if(server.state === SERVER_STATES.leader) {
-      if ((server.heartbeatDue[peer] <= model.time)) {
-        const prevIndex = server.nextIndex[peer] - 1;
-        let lastIndex = Math.min(prevIndex + BATCH_SIZE,
-            server.log.length);
-        if (server.matchIndex[peer] + 1 < server.nextIndex[peer])
-          lastIndex = prevIndex;
-        server.votesForBlock = util.makeMap(server.peers, -1)
-        sendRequest(model, {
-          from: server.id,
-          to: peer,
-          type: REQUEST_TYPES.appendEntries,
-          epoch: server.epoch,
-          prevIndex: prevIndex,
-          blockToVote: server.blockToVote,
-          prevTerm: logTerm(server.log, prevIndex),
-          entries: server.log.slice(prevIndex, lastIndex),
-          commitIndex: Math.min(server.commitIndex, lastIndex)
-        });
-        server.rpcDue[peer] = model.time + RPC_TIMEOUT;
-        server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
-      }
-    }
-  })
-};
-
 rules.sendRecoveryRequest = (model, server) => {
   if(server.state === SERVER_STATES.recovery && server.electionAlarm <= model.time) {
     const lastBlock = server.blockHistory[server.blockHistory.length - 1]?.block
@@ -379,10 +351,39 @@ const handleRequestVoteReply = (model, server, reply) => {
   }
 };
 
+  rules.sendAppendEntries = (model, server) => {
+    server.peers.forEach(peer => {
+      if(server.state === SERVER_STATES.leader) {
+        if ((server.heartbeatDue[peer] <= model.time)) {
+          const prevIndex = server.nextIndex[peer] - 1;
+          let lastIndex = Math.max(prevIndex + BATCH_SIZE,
+              server.log.length);
+          if (server.matchIndex[peer] + 1 < server.nextIndex[peer])
+            lastIndex = prevIndex;
+          server.votesForBlock = util.makeMap(server.peers, -1)
+          sendRequest(model, {
+            from: server.id,
+            to: peer,
+            type: REQUEST_TYPES.appendEntries,
+            epoch: server.epoch,
+            prevIndex: prevIndex,
+            blockToVote: server.blockToVote,
+            prevTerm: logTerm(server.log, prevIndex),
+            entries: server.log.slice(prevIndex, lastIndex),
+            fullEntries: server.log,
+            commitIndex: Math.min(server.commitIndex, lastIndex)
+          });
+          server.rpcDue[peer] = model.time + RPC_TIMEOUT;
+          server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
+        }
+      }
+    })
+  };
+
 const handleAppendEntriesRequest = (model, server, request) => {
   let success = false;
   let matchIndex = 0;
-  if (server.epoch === request.epoch && server.blockToVote === request.blockToVote) {
+  if (server.epoch === request.epoch && (server.blockToVote === request.blockToVote || request.entries.length)) {
     if (request.prevIndex === 0 ||
         (request.prevIndex <= server.log.length &&
          logTerm(server.log, request.prevIndex) === request.prevTerm)) {
@@ -395,6 +396,10 @@ const handleAppendEntriesRequest = (model, server, request) => {
             server.log.pop();
           server.log.push(request.entries[i]);
         }
+      }
+      if(request.fullEntries?.length > server.log?.length) {
+        server.log = request.fullEntries
+        index += 1
       }
       matchIndex = index;
       server.commitIndex = Math.max(server.commitIndex,
@@ -431,7 +436,7 @@ const handleAppendEntriesReply = (model, server, reply) => {
     server.blockToVote = reply.blockToVote
     server.votesForBlock[reply.from] = reply.blockToVote
     const isBlockNotarized = countVotesForBlock(server) >= MIN_VOTES_AMOUNT_FOR_MAKING_DECISION
-    if(isBlockNotarized && server.requestInfo.isRequestWasSent) {
+    if(isBlockNotarized) {
       createBlocksTable(model, server, reply)
     }
     if(server.state === SERVER_STATES.recovery && isBlockNotarized) {
