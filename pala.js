@@ -124,8 +124,8 @@ pala.server = (id, peers, isLeader) => {
     lastAddedBlockDuringRecovery: -1,
     isRecoveryEndedForCurrentServer: false,
     isRecoveryMessageSent: false,
+    isRequestMessageWasSent: false,
     epochChangingMessage: { isSent: false, isCanBeSent: true, epochToChange: 0 },
-    requestInfo: { isRequestWasSent: false, blocksAfterRequestCount: 0 },
     currentRecoveryId: getNextServerIdx(id),
     recoveryPaths: util.makeMap(peers, false),
     electionAlarm: makeElectionAlarm(0),
@@ -383,6 +383,7 @@ const handleRequestVoteReply = (model, server, reply) => {
 const handleAppendEntriesRequest = (model, server, request) => {
   let success = false;
   let matchIndex = 0;
+  console.log(`s block to vote: ${server.blockToVote}, r block to vote: ${request.blockToVote}`)
   if (server.epoch === request.epoch && (server.blockToVote === request.blockToVote || request.entries.length)) {
     if (request.prevIndex === 0 ||
         (request.prevIndex <= server.log.length &&
@@ -417,18 +418,20 @@ const handleAppendEntriesRequest = (model, server, request) => {
 };
 
 const createBlocksTable = (model, server, reply) => {
-  if(server.requestInfo.blocksAfterRequestCount < K_BLOCKS) {
-    server.requestInfo.blocksAfterRequestCount += 1
-    return;
-  }
-  if(server.state !== SERVER_STATES.stopped &&
-      server.state !== SERVER_STATES.recovery && server.blockToVote === reply.blockToVote) {
-    server.commitIndex += 1
-    const activePeers = server.peers.filter(servId => model.servers.find(item => item.id === servId)?.state !== SERVER_STATES.stopped )
-    activePeers.forEach(peer => server.matchIndex[peer] = Math.max(server.matchIndex[reply.from],
-        reply.matchIndex))
-    server.requestInfo.isRequestWasSent = false
-  }
+    const lastKBlock = server.blockHistory[server.blockHistory.length - K_BLOCKS - 1]?.log ?? []
+    // if(server.state === SERVER_STATES.leader) {
+    //   console.log(lastKBlock, 'last  K block')
+    //   console.log(server.log, 'server log')
+    //   console.log(server.blockHistory, 'server blockHistory')
+    // }
+    if(!lastKBlock.length) return;
+    if(server.state !== SERVER_STATES.stopped &&
+        server.state !== SERVER_STATES.recovery && lastKBlock.length === server.log.length) {
+      server.commitIndex += 1
+      const activePeers = server.peers.filter(servId => model.servers.find(item => item.id === servId)?.state !== SERVER_STATES.stopped )
+      activePeers.forEach(peer => server.matchIndex[peer] = Math.max(server.matchIndex[reply.from],
+          reply.matchIndex))
+    }
 }
 
 const handleAppendEntriesReply = (model, server, reply) => {
@@ -436,9 +439,6 @@ const handleAppendEntriesReply = (model, server, reply) => {
     server.blockToVote = reply.blockToVote
     server.votesForBlock[reply.from] = reply.blockToVote
     const isBlockNotarized = countVotesForBlock(server) >= MIN_VOTES_AMOUNT_FOR_MAKING_DECISION
-    if(isBlockNotarized) {
-      createBlocksTable(model, server, reply)
-    }
     if(server.state === SERVER_STATES.recovery && isBlockNotarized) {
       server.lastAddedBlockDuringRecovery = reply.blockToVote
       return
@@ -459,6 +459,9 @@ const handleAppendEntriesReply = (model, server, reply) => {
     }
     server.votesForBlock[reply.from] = reply.blockToVote
     createBlockHistory(server)
+    if(isBlockNotarized) {
+      createBlocksTable(model, server, reply)
+    }
   }
 };
 
@@ -468,13 +471,14 @@ const createBlockHistory = (server) => {
       server.votesForBlock = util.makeMap(server.peers, -1)
       return
     }
+    const foundLog = server.log.find(servLog => servLog.neededBlockNumber === server.blockToVote)
     server.blockHistory.push({
       block: server.blockToVote,
       epoch: server.epoch,
       nextIndex: {...server.nextIndex},
       matchIndex: {...server.matchIndex},
       commitIndex: server.commitIndex,
-      log: [...server.log]
+      log: (foundLog ? [foundLog] : [])
     })
     server.blockToVote = server.blockHistory[server.blockHistory.length - 1].block + 1
   }
@@ -577,14 +581,13 @@ pala.timeout = (model, server) => {
 pala.clientRequest = (model, server) => {
   if (server.state === SERVER_STATES.leader) {
     server.heartbeatDue = util.makeMap(server.peers, 0)
-    model.servers.forEach(serv => {
-      if(serv.state !== SERVER_STATES.stopped) {
-        serv.requestInfo.blocksAfterRequestCount = 0
-        serv.requestInfo.isRequestWasSent = true
-      }
-    })
-    server.log.push({epoch: server.epoch,
-                     value: 'v'});
+    const lastBlockNum =  server.blockHistory[server.blockHistory.length - 1]?.block ?? 0
+    const lastServerLogMessage = server.log[server.log.length - 1]?.neededBlockNumber ?? 0
+    server.log.push({
+      epoch: server.epoch,
+      value: 'v',
+      neededBlockNumber: lastBlockNum > lastServerLogMessage ? lastBlockNum : lastServerLogMessage + 1
+    });
   }
 };
 
