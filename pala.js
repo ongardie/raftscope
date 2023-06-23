@@ -122,6 +122,7 @@ pala.server = (id, peers, isLeader) => {
     recoveryTimeout: 0,
     commitIndex: 0,
     lastAddedBlockDuringRecovery: -1,
+    lastAddedLogDuringRecovery: [],
     isRecoveryEndedForCurrentServer: false,
     isRecoveryMessageSent: false,
     isRequestWasSent: false,
@@ -144,12 +145,12 @@ const onEndOfRecovery = (model, server) => {
     server.currentRecoveryId = getNextServerIdx(server.id)
     server.votesForBlock = util.makeMap(server.peers, -1)
     server.blockToVote = Math.max(server.blockToVote, server.blockHistory[server.blockHistory.length - 1].block) + 1
-  console.log(server.blockToVote, 'block to vote recovery')
     if(server.lastAddedBlockDuringRecovery >= 0) {
       if(server.blockHistory[server.blockHistory.length - 1]?.block !== server.lastAddedBlockDuringRecovery) {
-        server.blockHistory.push({ block: server.lastAddedBlockDuringRecovery, epoch: server.epoch })
+        server.blockHistory.push({ block: server.lastAddedBlockDuringRecovery, epoch: server.epoch, log: [...server.lastAddedLogDuringRecovery] })
       }
       server.lastAddedBlockDuringRecovery = -1
+      server.lastAddedLogDuringRecovery = []
     }
     clearServer(model, server)
 }
@@ -277,10 +278,7 @@ const handleRecoveryReply = (model, server, reply) => {
       server.isRecoveryEndedForCurrentServer = false
       server.blockToVote = server.blockHistory[server.blockHistory.length - 1].block + 1
       server.commitIndex = reply.replyBlock.commitIndex
-      const isNeededToAddLog = server.log[server.log.length - 1]?.neededBlockNumber < reply.replyBlock.log[reply.replyBlock.log.length - 1]?.neededBlockNumber
-      if(isNeededToAddLog) {
-        server.log.push(...reply.replyBlock.log)
-      }
+      server.log = reply.replyBlock.fullLog
       model.servers.forEach(serv => {
         if(serv.state !== SERVER_STATES.stopped) {
           serv.nextIndex[server.id] = server.commitIndex + 1
@@ -348,7 +346,10 @@ const handleRequestVoteReply = (model, server, reply) => {
 const createBlockHistory = (model, serverId) => {
     const foundServer = model.servers.find(({id}) => id === serverId)
     const foundLog = foundServer.log.find(servLog => servLog.neededBlockNumber === foundServer.blockToVote)
-    if(foundServer.state !== SERVER_STATES.stopped && foundServer.state !== SERVER_STATES.recovery) {
+    if(
+        (foundServer.state !== SERVER_STATES.stopped && foundServer.state !== SERVER_STATES.recovery) ||
+        (foundServer.state === SERVER_STATES.recovery && isRecoveryEnded(foundServer))
+    ) {
       foundServer.blockHistory.push({
         block: foundServer.blockToVote,
         epoch: foundServer.epoch,
@@ -356,6 +357,7 @@ const createBlockHistory = (model, serverId) => {
         matchIndex: {...foundServer.matchIndex},
         commitIndex: foundServer.commitIndex,
         log: (foundLog ? [foundLog] : []),
+        fullLog: [...foundServer.log],
         isNotarized: false,
       })
     }
@@ -385,11 +387,14 @@ rules.sendAppendEntries = (model, server) => {
         });
         server.rpcDue[peer] = model.time + RPC_TIMEOUT;
         server.heartbeatDue[peer] = model.time + ELECTION_TIMEOUT / 2;
+        const foundServer = model.servers.find(({id}) => id === peer)
+        const lastBlockIdx = foundServer.blockHistory[foundServer.blockHistory.length - 1]?.block
+        foundServer.blockToVote = lastBlockIdx ? lastBlockIdx + 1 : server.blockToVote + 1
         createBlockHistory(model, peer)
         if(server.peers.length - 1 === idx) {
+          const lastProposerBlockIdx = server.blockHistory[server.blockHistory.length - 1]?.block
+          server.blockToVote = lastProposerBlockIdx ? lastProposerBlockIdx + 1 : server.blockToVote + 1
           createBlockHistory(model, server.id)
-          const lastBlockIdx = server.blockHistory[server.blockHistory.length - 1]?.block
-          server.blockToVote = lastBlockIdx ? lastBlockIdx + 1 : server.blockToVote + 1
         }
       }
     }
@@ -399,7 +404,7 @@ rules.sendAppendEntries = (model, server) => {
 const handleAppendEntriesRequest = (model, server, request) => {
   let success = false;
   let matchIndex = 0;
-  if (server.epoch === request.epoch && server.blockToVote === request.blockToVote) {
+  if (server.epoch === request.epoch && request.blockToVote - server.blockToVote <= K_BLOCKS) {
     const lastBlockIdx = server.blockHistory[server.blockHistory.length - 1]?.block
     server.blockToVote = Math.max(lastBlockIdx, server.blockToVote) + 1
     if (request.prevIndex === 0 ||
@@ -432,23 +437,25 @@ const handleAppendEntriesRequest = (model, server, request) => {
 const createBlocksTable = (model, server, reply) => {
   if(server.state === SERVER_STATES.leader) {
     const notarizedBlocksHistory = server.blockHistory.filter(item => !item.isFinalized)
-    const lastKBlock = notarizedBlocksHistory.slice(-K_BLOCKS - 1) ?? []
+    const lastKBlock = server.blockHistory.slice(-K_BLOCKS - 1) ?? []
     const finalizingCandidate = lastKBlock[0]
-    const kBlocksAfterCandidate = lastKBlock.slice(-K_BLOCKS)
+    const kBlocksAfterCandidate = lastKBlock.slice(-K_BLOCKS).filter(({block}) => block !== finalizingCandidate.block)
+    if(finalizingCandidate.isFinalized || !lastKBlock.length) return;
     const isRequestBlockFinalized =
         kBlocksAfterCandidate.length === K_BLOCKS &&
         notarizedBlocksHistory.length > K_BLOCKS &&
         kBlocksAfterCandidate.every(block => block.isNotarized)
-    if(!lastKBlock.length) return;
     if(server.state !== SERVER_STATES.stopped &&
         server.state !== SERVER_STATES.recovery && isRequestBlockFinalized) {
       finalizingCandidate.isFinalized = true
       if(!finalizingCandidate.log.length) return;
       server.commitIndex += 1
+      // console.log(server.commitIndex )
       const activePeers = server.peers.filter(servId => model.servers.find(item => item.id === servId)?.state !== SERVER_STATES.stopped )
       activePeers.forEach(peer => {
-        server.matchIndex[peer] = Math.max(server.matchIndex[reply.from],
-          reply.matchIndex)
+        const countedMatchIndex = Math.max(server.matchIndex[reply.from],
+            reply.matchIndex)
+        server.matchIndex[peer] = reply.matchIndex - server.matchIndex[reply.from] > 1 ? server.matchIndex[reply.from] + 1 : countedMatchIndex
         const peerServ = model.servers.find(({id}) => id === peer)
         const serversNotPeer = model.servers.filter(({id}) => id !== peer && id !== server.id)
         peerServ.commitIndex += 1
@@ -462,16 +469,17 @@ const createBlocksTable = (model, server, reply) => {
 }
 
 const handleAppendEntriesReply = (model, server, reply) => {
-  if((server.epoch === reply.epoch && (server.blockToVote === reply.blockToVote || reply.entries.length)) || server.state === SERVER_STATES.recovery) {
+  if((server.epoch === reply.epoch && (reply.blockToVote - server.blockToVote <= K_BLOCKS || reply.entries.length)) || server.state === SERVER_STATES.recovery) {
     server.blockToVote = reply.blockToVote
     server.votesForBlock[reply.from] = reply.blockToVote
     const isBlockNotarized = countVotesForBlock(server, reply.entries.length) >= MIN_VOTES_AMOUNT_FOR_MAKING_DECISION
-    if(isBlockNotarized) {
-      notarizeBlock(model, server, reply.blockToVote)
-    }
     if(server.state === SERVER_STATES.recovery && isBlockNotarized) {
       server.lastAddedBlockDuringRecovery = reply.blockToVote
+      server.lastAddedLogDuringRecovery = reply.entries.length ? reply.entries : []
       return
+    }
+    if(isBlockNotarized) {
+      notarizeBlock(model, server, reply.blockToVote)
     }
     if (server.state === SERVER_STATES.leader && reply.success && isBlockNotarized) {
         server.electionAlarm = makeElectionAlarm(model.time)
@@ -496,12 +504,14 @@ const handleAppendEntriesReply = (model, server, reply) => {
 };
 
 const notarizeBlock = (model, server, blockToVote) => {
+  if(server.state !== SERVER_STATES.recovery && server.state !== SERVER_STATES.stopped) {
     if(server.blockHistory.find(item => item.block === blockToVote - 1)?.isNotarized) {
       server.votesForBlock = util.makeMap(server.peers, -1)
       return
     }
-    const foundBlocks = server.blockHistory.filter(block => block.block === blockToVote - 1)
+    const foundBlocks = server.blockHistory.filter(block => block.block <= blockToVote - 1)
     foundBlocks.forEach(item => item.isNotarized = true)
+  }
 }
 
 const handleMessage = (model, server, message) => {
@@ -603,7 +613,13 @@ pala.clientRequest = (model, server) => {
     const lastBlockNum =  server.blockHistory[server.blockHistory.length - 1]?.block ?? 0
     const lastServerLogMessage = server.log[server.log.length - 1]?.neededBlockNumber ?? 0
     const maxServerIdx = Math.max(...Object.values(server.nextIndex))
-    server.nextIndex = util.makeMap(server.peers, maxServerIdx)
+    const activePeers = server.peers.filter(peer => {
+      const foundPeerServer = model.servers.find(({id}) => id === peer && id !== server.id)
+      return foundPeerServer?.state !== SERVER_STATES.stopped && foundPeerServer?.state !== SERVER_STATES.recovery
+    })
+    activePeers.forEach(peer => {
+      server.nextIndex[peer] = maxServerIdx
+    })
     server.peers.forEach(peer => {
       const foundServer = model.servers.find(({id}) => peer === id)
       if(foundServer?.state !== SERVER_STATES.stopped && foundServer?.state !== SERVER_STATES.recovery && server.id !== foundServer?.id) {
@@ -612,7 +628,13 @@ pala.clientRequest = (model, server) => {
           value: 'v',
           neededBlockNumber: (lastBlockNum > lastServerLogMessage ? lastBlockNum : lastServerLogMessage) + 1
         });
-        foundServer.nextIndex = util.makeMap(foundServer.peers, maxServerIdx)
+        const foundServerActivePeers = foundServer.peers.filter(peer => {
+          const foundPeerServer = model.servers.find(({id}) => id === peer && id !== server.id)
+          return foundPeerServer?.state !== SERVER_STATES.stopped && foundPeerServer?.state !== SERVER_STATES.recovery
+        })
+        foundServerActivePeers.forEach(peer => {
+          foundServer.nextIndex[peer] = maxServerIdx
+        })
       }
     })
     server.log.push({
