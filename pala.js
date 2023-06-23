@@ -143,12 +143,13 @@ const onEndOfRecovery = (model, server) => {
     server.isRecoveryMessageSent = false
     server.currentRecoveryId = getNextServerIdx(server.id)
     server.votesForBlock = util.makeMap(server.peers, -1)
+    server.blockToVote = Math.max(server.blockToVote, server.blockHistory[server.blockHistory.length - 1].block) + 1
+  console.log(server.blockToVote, 'block to vote recovery')
     if(server.lastAddedBlockDuringRecovery >= 0) {
       if(server.blockHistory[server.blockHistory.length - 1]?.block !== server.lastAddedBlockDuringRecovery) {
         server.blockHistory.push({ block: server.lastAddedBlockDuringRecovery, epoch: server.epoch })
       }
       server.lastAddedBlockDuringRecovery = -1
-      server.blockToVote = server.blockHistory[server.blockHistory.length - 1].block + 1
     }
     clearServer(model, server)
 }
@@ -276,9 +277,9 @@ const handleRecoveryReply = (model, server, reply) => {
       server.isRecoveryEndedForCurrentServer = false
       server.blockToVote = server.blockHistory[server.blockHistory.length - 1].block + 1
       server.commitIndex = reply.replyBlock.commitIndex
-      const isNeededToAddLog = server.log[server.log.length - 1]?.neededBlock < reply.replyBlock.log[reply.replyBlock.log.length - 1]?.neededBlock
+      const isNeededToAddLog = server.log[server.log.length - 1]?.neededBlockNumber < reply.replyBlock.log[reply.replyBlock.log.length - 1]?.neededBlockNumber
       if(isNeededToAddLog) {
-        server.log.push(reply.replyBlock.log)
+        server.log.push(...reply.replyBlock.log)
       }
       model.servers.forEach(serv => {
         if(serv.state !== SERVER_STATES.stopped) {
@@ -324,16 +325,6 @@ const handleEpochChangingRequest = (model, server, message) => {
   }
 }
 
-rules.advanceCommitIndex = (model, server) => {
-  // const matchIndexes = util.mapValues(server.matchIndex).concat(server.log.length);
-  // matchIndexes.sort(util.numericCompare);
-  // const n = matchIndexes[Math.floor(NUM_SERVERS / 2)];
-  // if (server.state === SERVER_STATES.leader &&
-  //     logTerm(server.log, n) === server.epoch) {
-  //   server.commitIndex = Math.max(server.commitIndex, n);
-  // }
-};
-
 const handleRequestVoteRequest = (model, server, request) => {
   if(server.state !== SERVER_STATES.stopped) {
     server.votedFor = request.from;
@@ -374,14 +365,12 @@ rules.sendAppendEntries = (model, server) => {
   server.peers.forEach((peer, idx) => {
     if(server.state === SERVER_STATES.leader) {
       if ((server.heartbeatDue[peer] <= model.time)) {
-        console.log(server.peers, server.nextIndex, 'hi')
         const prevIndex = server.nextIndex[peer] - 1;
         let lastIndex = Math.max(prevIndex + BATCH_SIZE,
             server.log.length);
         if (server.matchIndex[peer] + 1 < server.nextIndex[peer])
           lastIndex = prevIndex;
         server.votesForBlock = util.makeMap(server.peers, -1)
-        console.log(server.log, prevIndex)
         sendRequest(model, {
           from: server.id,
           to: peer,
@@ -412,7 +401,7 @@ const handleAppendEntriesRequest = (model, server, request) => {
   let matchIndex = 0;
   if (server.epoch === request.epoch && server.blockToVote === request.blockToVote) {
     const lastBlockIdx = server.blockHistory[server.blockHistory.length - 1]?.block
-    server.blockToVote = lastBlockIdx ? lastBlockIdx + 1 : server.blockToVote + 1
+    server.blockToVote = Math.max(lastBlockIdx, server.blockToVote) + 1
     if (request.prevIndex === 0 ||
         (request.prevIndex <= server.log.length &&
          logTerm(server.log, request.prevIndex) === request.prevTerm)) {
@@ -493,7 +482,9 @@ const handleAppendEntriesReply = (model, server, reply) => {
               foundServer?.state !== SERVER_STATES.recovery &&
               server.blockToVote - foundServer.blockToVote <= 1
         } )
-        activePeers.forEach(peer => server.nextIndex[peer] = Math.max(server.matchIndex[peer], reply.matchIndex + 1))
+        activePeers.forEach(peer => {
+          server.nextIndex[peer] = Math.max(server.matchIndex[peer], reply.matchIndex + 1)
+        })
     }
     if(server.state === SERVER_STATES.follower && isBlockNotarized) {
       server.electionAlarm = makeElectionAlarm(model.time)
@@ -544,7 +535,6 @@ pala.update = (model) => {
     server.peers.forEach((peer) => {
       rules.sendEpochChangingRequest(model, server, peer)
     })
-    rules.advanceCommitIndex(model, server);
     rules.sendAppendEntries(model, server);
     rules.sendRecoveryRequest(model, server)
     server.peers.forEach((peer) => {
@@ -616,12 +606,12 @@ pala.clientRequest = (model, server) => {
     server.nextIndex = util.makeMap(server.peers, maxServerIdx)
     server.peers.forEach(peer => {
       const foundServer = model.servers.find(({id}) => peer === id)
-      foundServer.log.push({
-        epoch: server.epoch,
-        value: 'v',
-        neededBlockNumber: (lastBlockNum > lastServerLogMessage ? lastBlockNum : lastServerLogMessage) + 1
-      });
       if(foundServer?.state !== SERVER_STATES.stopped && foundServer?.state !== SERVER_STATES.recovery && server.id !== foundServer?.id) {
+        foundServer.log.push({
+          epoch: server.epoch,
+          value: 'v',
+          neededBlockNumber: (lastBlockNum > lastServerLogMessage ? lastBlockNum : lastServerLogMessage) + 1
+        });
         foundServer.nextIndex = util.makeMap(foundServer.peers, maxServerIdx)
       }
     })
