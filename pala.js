@@ -427,7 +427,7 @@ const handleAppendEntriesRequest = (model, server, request) => {
       entries: request.entries,
       epoch: server.epoch,
       success: success,
-      matchIndex: matchIndex,
+      matchIndex,
       granted: true,
       blockToVote: server.blockToVote,
     });
@@ -450,18 +450,20 @@ const createBlocksTable = (model, server, reply) => {
       finalizingCandidate.isFinalized = true
       if(!finalizingCandidate.log.length) return;
       server.commitIndex += 1
-      // console.log(server.commitIndex )
-      const activePeers = server.peers.filter(servId => model.servers.find(item => item.id === servId)?.state !== SERVER_STATES.stopped )
+      const activePeers = server.peers.filter(servId => model.servers.find(item => item.id === servId)?.state !== SERVER_STATES.stopped)
       activePeers.forEach(peer => {
-        const countedMatchIndex = Math.max(server.matchIndex[reply.from],
+        const countedMatchIndex = Math.max(server.matchIndex[peer],
             reply.matchIndex)
-        server.matchIndex[peer] = reply.matchIndex - server.matchIndex[reply.from] > 1 ? server.matchIndex[reply.from] + 1 : countedMatchIndex
+        server.matchIndex[peer] = reply.matchIndex - server.matchIndex[peer] > 1 ? server.matchIndex[peer] + 1 : countedMatchIndex
+        console.log(server.matchIndex[peer], peer)
+        // console.log('===========================')
         const peerServ = model.servers.find(({id}) => id === peer)
-        const serversNotPeer = model.servers.filter(({id}) => id !== peer && id !== server.id)
+        const serversNotPeer = model.servers.filter(serv => serv.id !== peer && serv.state !== SERVER_STATES.leader)
+        console.log(JSON.parse(JSON.stringify(serversNotPeer)))
         peerServ.commitIndex += 1
         serversNotPeer.forEach(noPeer => {
-          noPeer.matchIndex[peer] = server.matchIndex[peer]
-          noPeer.matchIndex[server.id] = server.matchIndex[peer]
+            noPeer.matchIndex[peer] = server.matchIndex[peer]
+            noPeer.matchIndex[server.id] = server.matchIndex[peer]
         })
       })
     }
