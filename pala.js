@@ -455,11 +455,8 @@ const createBlocksTable = (model, server, reply) => {
         const countedMatchIndex = Math.max(server.matchIndex[peer],
             reply.matchIndex)
         server.matchIndex[peer] = reply.matchIndex - server.matchIndex[peer] > 1 ? server.matchIndex[peer] + 1 : countedMatchIndex
-        console.log(server.matchIndex[peer], peer)
-        // console.log('===========================')
         const peerServ = model.servers.find(({id}) => id === peer)
         const serversNotPeer = model.servers.filter(serv => serv.id !== peer && serv.state !== SERVER_STATES.leader)
-        console.log(JSON.parse(JSON.stringify(serversNotPeer)))
         peerServ.commitIndex += 1
         serversNotPeer.forEach(noPeer => {
             noPeer.matchIndex[peer] = server.matchIndex[peer]
