@@ -3,11 +3,21 @@
 /* jshint devel: true */
 /* jshint jquery: true */
 /* global util */
-/* global raft */
+/* global pala */
 /* global makeState */
 /* global ELECTION_TIMEOUT */
 /* global NUM_SERVERS */
+/* global SERVER_STATES */
+/* global REQUEST_TYPES */
+/* global MESSAGE_DIRECTIONS */
+
 'use strict';
+
+const START_PROPOSER_IDX = 1
+
+const TERM_COLORS = {
+  recovery: 6,
+}
 
 var playback;
 var render = {};
@@ -43,6 +53,7 @@ var termColors = [
   '#e78ac3',
   '#a6d854',
   '#ffd92f',
+  '#fe4c4c'
 ];
 
 var SVG = function(tag) {
@@ -88,10 +99,11 @@ playback = function() {
   for (var i = 1; i <= NUM_SERVERS; i += 1) {
       var peers = [];
       for (var j = 1; j <= NUM_SERVERS; j += 1) {
-        if (i != j)
+        if (i !== j)
           peers.push(j);
       }
-      state.current.servers.push(raft.server(i, peers));
+      const isProposer = i === START_PROPOSER_IDX
+      state.current.servers.push(pala.server(i, peers, isProposer, isProposer ? START_PROPOSER_IDX : undefined));
   }
 })();
 
@@ -213,16 +225,26 @@ render.clock = function() {
 };
 
 var serverActions = [
-  ['stop', raft.stop],
-  ['resume', raft.resume],
-  ['restart', raft.restart],
-  ['time out', raft.timeout],
-  ['request', raft.clientRequest],
+  ['stop', pala.stop],
+  ['resume', pala.resume],
+  ['restart', pala.restart],
+  ['time out', pala.timeout],
+  ['request', pala.clientRequest],
 ];
 
 var messageActions = [
-  ['drop', raft.drop],
+  ['drop', pala.drop],
 ];
+
+const chooseNodeColor = (server) => {
+  if(server.state === SERVER_STATES.stopped) {
+    return 'gray'
+  }
+  if(server.state === SERVER_STATES.recovery) {
+    return termColors[TERM_COLORS.recovery]
+  }
+  return termColors[server.epoch % termColors.length]
+}
 
 render.servers = function(serversSame) {
   state.current.servers.forEach(function(server) {
@@ -233,29 +255,27 @@ render.servers = function(serversSame) {
                     (ELECTION_TIMEOUT * 2),
                     0, 1)));
     if (!serversSame) {
-      $('text.term', serverNode).text(server.term);
+      $('text.term', serverNode).text(server.epoch);
       serverNode.attr('class', 'server ' + server.state);
       $('circle.background', serverNode)
-        .attr('style', 'fill: ' +
-              (server.state == 'stopped' ? 'gray'
-                : termColors[server.term % termColors.length]));
+        .attr('style', 'fill: ' + chooseNodeColor(server));
       var votesGroup = $('.votes', serverNode);
       votesGroup.empty();
-      if (server.state == 'candidate') {
+      if (server.state === SERVER_STATES.recovery) {
         state.current.servers.forEach(function (peer) {
           var coord = util.circleCoord((peer.id - 1) / NUM_SERVERS,
                                        serverSpec(server.id).cx,
                                        serverSpec(server.id).cy,
                                        serverSpec(server.id).r * 5/8);
           var state;
-          if (peer == server || server.voteGranted[peer.id]) {
+          if (peer === server || server.voteGranted[peer.id]) {
             state = 'have';
-          } else if (peer.votedFor == server.id && peer.term == server.term) {
+          } else if (peer.votedFor === server.id && peer.epoch === server.epoch) {
             state = 'coming';
           } else {
             state = 'no';
           }
-          var granted = (peer == server ? true : server.voteGranted[peer.id]);
+          var granted = (peer === server ? true : server.voteGranted[peer.id]);
           votesGroup.append(
             SVG('circle')
               .attr({
@@ -306,11 +326,11 @@ render.entry = function(spec, entry, committed) {
     .append(SVG('rect')
       .attr(spec)
       .attr('stroke-dasharray', committed ? '1 0' : '5 5')
-      .attr('style', 'fill: ' + termColors[entry.term % termColors.length]))
+      .attr('style', 'fill: ' + termColors[entry.epoch % termColors.length]))
     .append(SVG('text')
       .attr({x: spec.x + spec.width / 2,
              y: spec.y + spec.height / 2})
-      .text(entry.term));
+      .text(entry.epoch));
 };
 
 render.logs = function() {
@@ -381,7 +401,7 @@ render.logs = function() {
              entry,
              index <= server.commitIndex));
     });
-    if (leader !== null && leader != server) {
+    if (leader !== null && leader !== server) {
       log.append(
         SVG('circle')
           .attr('title', 'match index')//.tooltip({container: 'body'})
@@ -410,7 +430,7 @@ render.messages = function(messagesSame) {
           .attr('title', message.type + ' ' + message.direction)//.tooltip({container: 'body'})
           .append(SVG('circle'))
           .append(SVG('path').attr('class', 'message-direction'));
-      if (message.direction == 'reply')
+      if (message.direction === MESSAGE_DIRECTIONS.reply)
         a.append(SVG('path').attr('class', 'message-success'));
       messagesGroup.append(a);
     });
@@ -448,24 +468,24 @@ render.messages = function(messagesSame) {
     });
   }
   state.current.messages.forEach(function(message, i) {
-    var s = messageSpec(message.from, message.to,
+    const s = messageSpec(message.from, message.to,
                         (state.current.time - message.sendTime) /
                         (message.recvTime - message.sendTime));
     $('#message-' + i + ' circle', messagesGroup)
       .attr(s);
-    if (message.direction == 'reply') {
-      var dlist = [];
+    if (message.direction === MESSAGE_DIRECTIONS.reply) {
+      const dlist = [];
       dlist.push('M', s.cx - s.r, comma, s.cy,
                  'L', s.cx + s.r, comma, s.cy);
-      if ((message.type == 'RequestVote' && message.granted) ||
-          (message.type == 'AppendEntries' && message.success)) {
+      if ((message.type === REQUEST_TYPES.requestVote && message.granted) ||
+          (message.type === REQUEST_TYPES.appendEntries && message.success)) {
          dlist.push('M', s.cx, comma, s.cy - s.r,
                     'L', s.cx, comma, s.cy + s.r);
       }
       $('#message-' + i + ' path.message-success', messagesGroup)
         .attr('d', dlist.join(' '));
     }
-    var dir = $('#message-' + i + ' path.message-direction', messagesGroup);
+    const dir = $('#message-' + i + ' path.message-direction', messagesGroup);
     if (playback.isPaused()) {
       dir.attr('style', 'marker-end:url(#TriangleOutS-' + message.type + ')')
          .attr('d',
@@ -479,7 +499,7 @@ render.messages = function(messagesSame) {
 };
 
 var relTime = function(time, now) {
-  if (time == util.Inf)
+  if (time === util.Inf)
     return 'infinity';
   var sign = time > now ? '+' : '';
   return sign + ((time - now) / 1e3).toFixed(3) + 'ms';
@@ -521,7 +541,7 @@ serverModal = function(model, server) {
     .empty()
     .append($('<dl class="dl-horizontal"></dl>')
       .append(li('state', server.state))
-      .append(li('currentTerm', server.term))
+      .append(li('currentEpoch', server.epoch))
       .append(li('votedFor', server.votedFor))
       .append(li('commitIndex', server.commitIndex))
       .append(li('electionAlarm', relTime(server.electionAlarm, model.time)))
@@ -555,18 +575,18 @@ messageModal = function(model, message) {
       .append(li('to', 'S' + message.to))
       .append(li('sent', relTime(message.sendTime, model.time)))
       .append(li('deliver', relTime(message.recvTime, model.time)))
-      .append(li('term', message.term));
-  if (message.type == 'RequestVote') {
-    if (message.direction == 'request') {
+      .append(li('epoch', message.epoch));
+  if (message.type === REQUEST_TYPES.requestVote) {
+    if (message.direction === MESSAGE_DIRECTIONS.request) {
       fields.append(li('lastLogIndex', message.lastLogIndex));
       fields.append(li('lastLogTerm', message.lastLogTerm));
     } else {
       fields.append(li('granted', message.granted));
     }
-  } else if (message.type == 'AppendEntries') {
-    if (message.direction == 'request') {
+  } else if (message.type === REQUEST_TYPES.appendEntries) {
+    if (message.direction === MESSAGE_DIRECTIONS.request) {
       var entries = '[' + message.entries.map(function(e) {
-            return e.term;
+            return e.epoch;
       }).join(' ') + ']';
       fields.append(li('prevIndex', message.prevIndex));
       fields.append(li('prevTerm', message.prevTerm));
@@ -612,7 +632,7 @@ render.update = function() {
   // value hasn't changed.
   var serversSame = false;
   var messagesSame = false;
-  if (lastRenderedO == state.current) {
+  if (lastRenderedO === state.current) {
     serversSame = util.equals(lastRenderedV.servers, state.current.servers);
     messagesSame = util.equals(lastRenderedV.messages, state.current.messages);
   }
@@ -658,7 +678,7 @@ $(window).keyup(function(e) {
   } else if (e.keyCode == 'C'.charCodeAt(0)) {
     if (leader !== null) {
       state.fork();
-      raft.clientRequest(state.current, leader);
+      pala.clientRequest(state.current, leader);
       state.save();
       render.update();
       $('.modal').modal('hide');
@@ -666,34 +686,34 @@ $(window).keyup(function(e) {
   } else if (e.keyCode == 'R'.charCodeAt(0)) {
     if (leader !== null) {
       state.fork();
-      raft.stop(state.current, leader);
-      raft.resume(state.current, leader);
+      pala.stop(state.current, leader);
+      pala.resume(state.current, leader);
       state.save();
       render.update();
       $('.modal').modal('hide');
     }
   } else if (e.keyCode == 'T'.charCodeAt(0)) {
     state.fork();
-    raft.spreadTimers(state.current);
+    pala.spreadTimers(state.current);
     state.save();
     render.update();
     $('.modal').modal('hide');
   } else if (e.keyCode == 'A'.charCodeAt(0)) {
     state.fork();
-    raft.alignTimers(state.current);
+    pala.alignTimers(state.current);
     state.save();
     render.update();
     $('.modal').modal('hide');
   } else if (e.keyCode == 'L'.charCodeAt(0)) {
     state.fork();
     playback.pause();
-    raft.setupLogReplicationScenario(state.current);
+    pala.setupLogReplicationScenario(state.current);
     state.save();
     render.update();
     $('.modal').modal('hide');
   } else if (e.keyCode == 'B'.charCodeAt(0)) {
     state.fork();
-    raft.resumeAll(state.current);
+    pala.resumeAll(state.current);
     state.save();
     render.update();
     $('.modal').modal('hide');
@@ -713,12 +733,12 @@ $('#modal-details').on('show.bs.modal', function(e) {
 
 var getLeader = function() {
   var leader = null;
-  var term = 0;
+  var epoch = 0;
   state.current.servers.forEach(function(server) {
-    if (server.state == 'leader' &&
-        server.term > term) {
+    if (server.state == SERVER_STATES.leader &&
+        server.epoch > epoch) {
         leader = server;
-        term = server.term;
+        epoch = server.epoch;
     }
   });
   return leader;
@@ -766,7 +786,7 @@ $('#time-button')
 // $('[data-toggle="tooltip"]').tooltip();
 
 state.updater = function(state) {
-  raft.update(state.current);
+  pala.update(state.current);
   var time = state.current.time;
   var base = state.base(time);
   state.current.time = base.time;
